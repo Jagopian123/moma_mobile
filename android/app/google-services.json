@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "986122744499",
+    "project_id": "moma-2f267",
+    "storage_bucket": "moma-2f267.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:986122744499:android:2e7776ad48123421adb6c6",
+        "android_client_info": {
+          "package_name": "com.ahmad.moma.moma_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDE-ZH7zGS-S2Kym5sVd59kujrA2BsKcGs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
