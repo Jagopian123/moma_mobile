@@ -9,6 +9,7 @@ import '../../asset/providers/wallet_provider.dart';
 import '../models/ai_transaction_result.dart';
 import '../providers/ai_chat_provider.dart';
 import '../providers/category_provider.dart';
+import '../providers/voice_provider.dart';
 
 // ── Formatter ─────────────────────────────────────────────────────────────────
 
@@ -55,15 +56,73 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     if (text.isEmpty) return;
     _textController.clear();
     FocusScope.of(context).unfocus();
+    // Cancel voice if still active before sending
+    final voice = ref.read(voiceProvider);
+    if (voice.isListening) ref.read(voiceProvider.notifier).cancel();
     await ref.read(aiChatProvider.notifier).sendMessage(text);
     _scrollToBottom();
+  }
+
+  void _toggleVoice() {
+    final voice = ref.read(voiceProvider);
+    if (voice.isListening) {
+      // Stop and fill text field with whatever was heard
+      ref.read(voiceProvider.notifier).stopListening(
+        onFinalResult: (text) {
+          _textController.text = text;
+          _textController.selection =
+              TextSelection.fromPosition(TextPosition(offset: text.length));
+        },
+      );
+    } else {
+      ref.read(voiceProvider.notifier).startListening(
+        onFinalResult: (text) {
+          // Auto-send after short pause so the user sees the filled text
+          Future.delayed(const Duration(milliseconds: 400), () {
+            if (mounted) _send();
+          });
+        },
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(aiChatProvider);
+    final voiceState = ref.watch(voiceProvider);
 
     ref.listen(aiChatProvider, (_, __) => _scrollToBottom());
+
+    // Real-time transcript → fill text field
+    ref.listen<VoiceState>(voiceProvider, (prev, next) {
+      if (next.isListening && next.transcript.isNotEmpty) {
+        if (_textController.text != next.transcript) {
+          _textController.text = next.transcript;
+          _textController.selection = TextSelection.fromPosition(
+            TextPosition(offset: next.transcript.length),
+          );
+        }
+      }
+      // Error notification
+      if (next.status == VoiceStatus.error &&
+          prev?.status != VoiceStatus.error &&
+          next.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              next.errorMessage!,
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
+            ),
+            backgroundColor: AppColors.expense,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        Future.delayed(const Duration(seconds: 4), () {
+          if (mounted) ref.read(voiceProvider.notifier).clearError();
+        });
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -120,7 +179,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                 ? _buildWelcomeView()
                 : _buildChatList(chatState),
           ),
-          _buildInputBar(chatState.isLoading),
+          _buildInputBar(chatState.isLoading, voiceState),
         ],
       ),
     );
@@ -277,89 +336,213 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
 
   // ── Input Bar ─────────────────────────────────────────────────────
 
-  Widget _buildInputBar(bool isLoading) {
+  Widget _buildInputBar(bool isLoading, VoiceState voiceState) {
+    final isListening = voiceState.isListening;
+    final isRequesting =
+        voiceState.status == VoiceStatus.requestingPermission;
+
     return Container(
       color: AppColors.white,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           const Divider(height: 1, color: AppColors.border),
+
+          // ── Listening banner ──────────────────────────────────────
+          if (isListening)
+            _buildListeningBanner(voiceState),
+
+          // ── Input row ─────────────────────────────────────────────
           SafeArea(
             top: false,
             child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    enabled: !isLoading,
-                    maxLines: null,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _send(),
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: 'Contoh: beli makan 25k cash...',
-                      hintStyle: const TextStyle(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  // Text field
+                  Expanded(
+                    child: TextField(
+                      controller: _textController,
+                      enabled: !isLoading,
+                      maxLines: null,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _send(),
+                      style: const TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 14,
-                        color: AppColors.textHint,
+                        color: AppColors.textPrimary,
                       ),
-                      filled: true,
-                      fillColor: AppColors.background,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                        vertical: AppSpacing.sm + 2,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.full),
-                        borderSide: BorderSide.none,
+                      decoration: InputDecoration(
+                        hintText: isListening
+                            ? 'Mendengarkan...'
+                            : 'Ketik atau tekan mic...',
+                        hintStyle: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          color: isListening
+                              ? AppColors.expense.withValues(alpha: 0.6)
+                              : AppColors.textHint,
+                          fontStyle: isListening
+                              ? FontStyle.italic
+                              : FontStyle.normal,
+                        ),
+                        filled: true,
+                        fillColor: isListening
+                            ? const Color(0xFFFEF2F2)
+                            : AppColors.background,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.sm + 2,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.full),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                GestureDetector(
-                  onTap: isLoading ? null : _send,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      gradient: isLoading
-                          ? null
-                          : const LinearGradient(
-                              colors: [Color(0xFF6366F1), Color(0xFF2563EB)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+
+                  const SizedBox(width: AppSpacing.xs + 2),
+
+                  // Mic button
+                  GestureDetector(
+                    onTap: isLoading ? null : _toggleVoice,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: isListening
+                            ? AppColors.expense
+                            : AppColors.background,
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.full),
+                      ),
+                      child: isRequesting
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            )
+                          : Icon(
+                              isListening
+                                  ? Icons.stop_rounded
+                                  : Icons.mic_rounded,
+                              color: isListening
+                                  ? Colors.white
+                                  : AppColors.textSecondary,
+                              size: 20,
                             ),
-                      color: isLoading ? AppColors.border : null,
-                      borderRadius: BorderRadius.circular(AppRadius.full),
                     ),
-                    child: isLoading
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.primary,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.send_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(width: AppSpacing.xs + 2),
+
+                  // Send button
+                  GestureDetector(
+                    onTap: isLoading ? null : _send,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: isLoading
+                            ? null
+                            : const LinearGradient(
+                                colors: [
+                                  Color(0xFF6366F1),
+                                  Color(0xFF2563EB)
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                        color: isLoading ? AppColors.border : null,
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.full),
+                      ),
+                      child: isLoading
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primary,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.send_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListeningBanner(VoiceState voiceState) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.md, AppSpacing.xs, AppSpacing.md, 0,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: AppColors.expense.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Row(
+        children: [
+          const _PulsingMicIcon(),
+          const SizedBox(width: AppSpacing.sm),
+          // Sound-level bar
+          _SoundLevelBar(level: voiceState.soundLevel),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              voiceState.transcript.isNotEmpty
+                  ? voiceState.transcript
+                  : 'Mendengarkan...',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                color: voiceState.transcript.isNotEmpty
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
+                fontStyle: voiceState.transcript.isEmpty
+                    ? FontStyle.italic
+                    : FontStyle.normal,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          // Cancel button
+          GestureDetector(
+            onTap: () => ref.read(voiceProvider.notifier).cancel(),
+            child: const Padding(
+              padding: EdgeInsets.only(left: AppSpacing.sm),
+              child: Icon(
+                Icons.close_rounded,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
+            ),
           ),
         ],
       ),
@@ -1078,6 +1261,90 @@ class _ExampleChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Pulsing Mic Icon (used in listening banner) ───────────────────────────────
+
+class _PulsingMicIcon extends StatefulWidget {
+  const _PulsingMicIcon();
+
+  @override
+  State<_PulsingMicIcon> createState() => _PulsingMicIconState();
+}
+
+class _PulsingMicIconState extends State<_PulsingMicIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(begin: 0.88, end: 1.12).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: AppColors.expense,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+        ),
+        child: const Icon(Icons.mic_rounded, color: Colors.white, size: 15),
+      ),
+    );
+  }
+}
+
+// ── Sound Level Bar ───────────────────────────────────────────────────────────
+
+class _SoundLevelBar extends StatelessWidget {
+  final double level; // 0.0 – 1.0
+  const _SoundLevelBar({required this.level});
+
+  @override
+  Widget build(BuildContext context) {
+    const barCount = 4;
+    const maxHeight = 16.0;
+    const minHeight = 3.0;
+    // Each bar gets a slightly different multiplier so they look varied
+    const multipliers = [0.6, 1.0, 0.8, 0.5];
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: List.generate(barCount, (i) {
+        final h = (minHeight + (maxHeight - minHeight) * level * multipliers[i])
+            .clamp(minHeight, maxHeight);
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 80),
+          margin: const EdgeInsets.symmetric(horizontal: 1.5),
+          width: 3,
+          height: h,
+          decoration: BoxDecoration(
+            color: AppColors.expense.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        );
+      }),
     );
   }
 }

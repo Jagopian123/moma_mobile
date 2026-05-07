@@ -47,6 +47,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Moma membutuhkan akses mikrofon untuk mencatat transaksi dengan suara</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Moma menggunakan speech recognition untuk mengubah suara menjadi teks transaksi</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
