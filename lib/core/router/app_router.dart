@@ -10,6 +10,7 @@ import '../../features/auth/providers/onboarding_provider.dart';
 import '../../features/settings/pages/profile_page.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../../features/asset/pages/asset_page.dart';
+import '../../features/transaction/pages/ai_chat_page.dart';
 import '../../features/transaction/pages/transaction_page.dart';
 import '../../features/budget/pages/budget_page.dart';
 import '../../features/financial_plan/pages/financial_plan_page.dart';
@@ -161,6 +162,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/debt',
         name: 'debt',
         builder: (_, __) => const DebtPage(),
+      ),
+      GoRoute(
+        path: '/ai-chat',
+        name: 'aiChat',
+        builder: (_, __) => const AiChatPage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

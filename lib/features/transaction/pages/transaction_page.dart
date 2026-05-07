@@ -62,7 +62,7 @@ class _TransactionPageState extends State<TransactionPage>
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: AppColors.border.withOpacity(0.4),
+          color: AppColors.border.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: TabBar(
@@ -72,7 +72,7 @@ class _TransactionPageState extends State<TransactionPage>
             borderRadius: BorderRadius.circular(AppRadius.sm),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),

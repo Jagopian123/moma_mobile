@@ -22,40 +22,25 @@ class MainScaffold extends StatelessWidget {
 
     return Scaffold(
       body: child,
-      floatingActionButton: _buildFAB(context),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: _buildBottomNav(context, currentIndex),
-    );
-  }
-
-  Widget _buildFAB(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showAddTransaction(context),
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: const BoxDecoration(
-          gradient: AppColors.primaryGradient,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x402563EB),
-              blurRadius: 16,
-              offset: Offset(0, 6),
-            ),
-          ],
+      // AI Catat FAB — lives in Scaffold's overlay layer so modal barriers cover it
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'ai_chat_fab',
+        onPressed: () => context.push('/ai-chat'),
+        backgroundColor: const Color(0xFF2563EB),
+        foregroundColor: Colors.white,
+        elevation: 3,
+        icon: const Icon(Icons.auto_awesome_rounded, size: 20),
+        label: const Text(
+          'AI Catat',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
       ),
-    );
-  }
-
-  void _showAddTransaction(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const AddTransactionSheet(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      bottomNavigationBar: _buildBottomNav(context, currentIndex),
     );
   }
 
@@ -89,8 +74,26 @@ class MainScaffold extends StatelessWidget {
                 isSelected: currentIndex == 1,
                 onTap: () => context.go('/transaction'),
               ),
-              // Spacer untuk FAB
-              const SizedBox(width: 56),
+              // Center + button (add transaction)
+              GestureDetector(
+                onTap: () => _showAddTransaction(context),
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x402563EB),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 26),
+                ),
+              ),
               _NavItem(
                 icon: Icons.account_balance_wallet_rounded,
                 label: 'Aset',
@@ -107,6 +110,15 @@ class MainScaffold extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showAddTransaction(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AddTransactionSheet(),
     );
   }
 }
@@ -141,7 +153,7 @@ class _NavItem extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primary.withOpacity(0.12)
+                    ? AppColors.primary.withValues(alpha: 0.12)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(AppRadius.full),
               ),

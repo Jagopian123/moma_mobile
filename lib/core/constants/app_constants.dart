@@ -10,7 +10,8 @@ class AppConstants {
   static const String keyIsBalanceVisible = 'is_balance_visible';
 
   // API
-  static const String apiBaseUrl = 'https://moma.empatech.id/api/v1';
+  //static const String apiBaseUrl = 'https://moma.empatech.id/api/v1';
+  static const String apiBaseUrl = 'http://192.168.1.10:8000/api/v1';
   // static const String apiBaseUrl = 'http://127.0.0.1:8000/api/v1'; // iOS simulator
 
   // Google Sign In
