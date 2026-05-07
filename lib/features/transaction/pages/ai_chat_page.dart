@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/hive/models/category_model.dart';
@@ -63,27 +67,93 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     _scrollToBottom();
   }
 
-  void _toggleVoice() {
-    final voice = ref.read(voiceProvider);
-    if (voice.isListening) {
-      // Stop and fill text field with whatever was heard
-      ref.read(voiceProvider.notifier).stopListening(
-        onFinalResult: (text) {
-          _textController.text = text;
-          _textController.selection =
-              TextSelection.fromPosition(TextPosition(offset: text.length));
-        },
-      );
-    } else {
-      ref.read(voiceProvider.notifier).startListening(
-        onFinalResult: (text) {
-          // Auto-send after short pause so the user sees the filled text
-          Future.delayed(const Duration(milliseconds: 400), () {
-            if (mounted) _send();
-          });
-        },
-      );
-    }
+  // ── Receipt scan ──────────────────────────────────────────────────────────
+
+  Future<void> _showImagePickerSheet() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                ),
+              ),
+              const Text('Pilih Sumber Gambar', style: AppTextStyles.h4),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: _PickerOption(
+                      icon: Icons.camera_alt_rounded,
+                      label: 'Kamera',
+                      color: const Color(0xFF2563EB),
+                      onTap: () => Navigator.pop(context, ImageSource.camera),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: _PickerOption(
+                      icon: Icons.photo_library_rounded,
+                      label: 'Galeri',
+                      color: const Color(0xFF7C3AED),
+                      onTap: () => Navigator.pop(context, ImageSource.gallery),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null || !mounted) return;
+
+    final picker = ImagePicker();
+    final xfile = await picker.pickImage(
+      source: source,
+      imageQuality: 90, // light pre-quality — ImageCompressUtil does the real work
+      maxWidth: 2048,
+    );
+
+    if (xfile == null || !mounted) return;
+
+    await ref.read(aiChatProvider.notifier).scanReceipt(File(xfile.path));
+    _scrollToBottom();
+  }
+
+  void _startVoice() {
+    ref.read(voiceProvider.notifier).startListening(
+      onFinalResult: (text) {
+        // Safety net if engine auto-stops (e.g. very long silence)
+        _textController.text = text;
+        _textController.selection =
+            TextSelection.fromPosition(TextPosition(offset: text.length));
+      },
+    );
+  }
+
+  void _stopVoice() {
+    ref.read(voiceProvider.notifier).stopListening(
+      onFinalResult: (text) {
+        _textController.text = text;
+        _textController.selection =
+            TextSelection.fromPosition(TextPosition(offset: text.length));
+      },
+    );
   }
 
   @override
@@ -282,7 +352,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           return _buildTypingIndicator();
         }
         final msg = chatState.messages[index];
-        if (msg.isUser) return _UserBubble(text: msg.text);
+        if (msg.isUser) return _UserBubble(text: msg.text, imagePath: msg.imagePath);
         if (msg.transactionResults != null && msg.transactionResults!.isNotEmpty) {
           return _TransactionGroup(message: msg, results: msg.transactionResults!);
         }
@@ -378,7 +448,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                       decoration: InputDecoration(
                         hintText: isListening
                             ? 'Mendengarkan...'
-                            : 'Ketik atau tekan mic...',
+                            : 'Ketik atau tahan mic...',
                         hintStyle: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 14,
@@ -408,9 +478,35 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
 
                   const SizedBox(width: AppSpacing.xs + 2),
 
-                  // Mic button
+                  // Camera / receipt scan button
                   GestureDetector(
-                    onTap: isLoading ? null : _toggleVoice,
+                    onTap: isLoading ? null : _showImagePickerSheet,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                      ),
+                      child: Icon(
+                        Icons.camera_alt_rounded,
+                        color: isLoading
+                            ? AppColors.border
+                            : AppColors.textSecondary,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: AppSpacing.xs + 2),
+
+                  // Mic button — tahan untuk rekam, lepas untuk selesai
+                  GestureDetector(
+                    onLongPressStart: isLoading ? null : (_) => _startVoice(),
+                    onLongPressEnd: (_) => _stopVoice(),
+                    onLongPressCancel: () =>
+                        ref.read(voiceProvider.notifier).cancel(),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       width: 44,
@@ -431,9 +527,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                               ),
                             )
                           : Icon(
-                              isListening
-                                  ? Icons.stop_rounded
-                                  : Icons.mic_rounded,
+                              Icons.mic_rounded,
                               color: isListening
                                   ? Colors.white
                                   : AppColors.textSecondary,
@@ -568,7 +662,8 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
 
 class _UserBubble extends StatelessWidget {
   final String text;
-  const _UserBubble({required this.text});
+  final String? imagePath;
+  const _UserBubble({required this.text, this.imagePath});
 
   @override
   Widget build(BuildContext context) {
@@ -579,10 +674,6 @@ class _UserBubble extends StatelessWidget {
         children: [
           Flexible(
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm + 2,
-              ),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF6366F1), Color(0xFF2563EB)],
@@ -595,13 +686,51 @@ class _UserBubble extends StatelessWidget {
                   bottomLeft: Radius.circular(AppRadius.lg),
                 ),
               ),
-              child: Text(
-                text,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 14,
-                  color: Colors.white,
-                ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Receipt image thumbnail
+                  if (imagePath != null)
+                    Image.file(
+                      File(imagePath!),
+                      width: 220,
+                      height: 160,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                  // Label text
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm + 2,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (imagePath != null) ...[
+                          const Icon(
+                            Icons.receipt_long_rounded,
+                            color: Colors.white70,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        Flexible(
+                          child: Text(
+                            text,
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -725,11 +854,21 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
   bool _saving = false;
   bool _saved = false;
   bool _dismissed = false;
+  late TextEditingController _amountController;
 
   @override
   void initState() {
     super.initState();
+    _amountController = TextEditingController(
+      text: widget.result.amount.toInt().toString(),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => _autoSelect());
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
   }
 
   void _autoSelect() {
@@ -782,8 +921,9 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
     setState(() => _saving = true);
     final wallets    = ref.read(walletProvider);
     final categories = ref.read(categoryProvider);
+    final editedAmount = double.tryParse(_amountController.text.replaceAll('.', '')) ?? widget.result.amount;
     final success = await ref.read(aiChatProvider.notifier).confirmTransaction(
-      result:   widget.result,
+      result:   widget.result.copyWith(amount: editedAmount),
       messageId: widget.message.id,
       wallet:   _walletById(wallets, _walletId),
       toWallet: _walletById(wallets, _toWalletId),
@@ -900,14 +1040,41 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          _currencyFmt.format(widget.result.amount),
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: _typeColor,
-                          ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Rp ',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: _typeColor,
+                              ),
+                            ),
+                            Expanded(
+                              child: TextField(
+                                controller: _amountController,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: _typeColor,
+                                ),
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -1259,6 +1426,52 @@ class _ExampleChip extends StatelessWidget {
             fontSize: 12,
             color: AppColors.primary,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Picker Option (Camera / Gallery button in bottom sheet) ──────────────────
+
+class _PickerOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _PickerOption({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 32),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
         ),
       ),
     );

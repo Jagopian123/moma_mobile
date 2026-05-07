@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../core/services/api_service.dart';
+import '../../../core/utils/image_compress_util.dart';
 import '../../../core/hive/models/wallet_model.dart';
 import '../../../core/hive/models/category_model.dart';
 import '../models/ai_transaction_result.dart';
@@ -17,6 +20,8 @@ class ChatMessage {
   final List<AiTransactionResult>? transactionResults;
   final bool isError;
   final DateTime timestamp;
+  /// Local path to a receipt image thumbnail (user-side scan message only).
+  final String? imagePath;
 
   const ChatMessage({
     required this.id,
@@ -25,9 +30,13 @@ class ChatMessage {
     this.transactionResults,
     this.isError = false,
     required this.timestamp,
+    this.imagePath,
   });
 
-  ChatMessage copyWith({String? text, List<AiTransactionResult>? transactionResults}) {
+  ChatMessage copyWith({
+    String? text,
+    List<AiTransactionResult>? transactionResults,
+  }) {
     return ChatMessage(
       id: id,
       text: text ?? this.text,
@@ -35,6 +44,7 @@ class ChatMessage {
       transactionResults: transactionResults ?? this.transactionResults,
       isError: isError,
       timestamp: timestamp,
+      imagePath: imagePath,
     );
   }
 }
@@ -65,6 +75,8 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
 
   AiChatNotifier(this._ref) : super(const AiChatState());
 
+  // ── Text / Voice ────────────────────────────────────────────────────────────
+
   Future<void> sendMessage(String text) async {
     final userMsg = ChatMessage(
       id: '${DateTime.now().millisecondsSinceEpoch}_user',
@@ -85,50 +97,73 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
         options: Options(receiveTimeout: const Duration(seconds: 45)),
       );
 
-      final rawData = response.data['data'];
-      final List<AiTransactionResult> results;
-      if (rawData is List) {
-        results = AiTransactionResult.fromJsonList(rawData);
-      } else {
-        results = [AiTransactionResult.fromJson(rawData as Map<String, dynamic>)];
-      }
-
-      final aiMsg = ChatMessage(
-        id: '${DateTime.now().millisecondsSinceEpoch}_ai',
-        text: results.length == 1
-            ? _typeLabel(results.first.type)
-            : 'Saya mendeteksi ${results.length} transaksi. Cek detail di bawah:',
-        isUser: false,
-        transactionResults: results,
-        timestamp: DateTime.now(),
-      );
-
-      state = state.copyWith(
-        messages: [...state.messages, aiMsg],
-        isLoading: false,
-      );
+      _handleResults(response.data['data']);
     } on DioException catch (e) {
-      debugPrint('[AiChat] DioException: ${e.type} | status=${e.response?.statusCode} | ${e.response?.data}');
-      final String msg;
-      switch (e.type) {
-        case DioExceptionType.connectionTimeout:
-        case DioExceptionType.receiveTimeout:
-        case DioExceptionType.sendTimeout:
-          msg = 'Koneksi timeout. Pastikan backend berjalan dan coba lagi.';
-        case DioExceptionType.connectionError:
-          msg = 'Tidak dapat terhubung ke server. Pastikan backend berjalan.';
-        default:
-          final serverMsg = e.response?.data is Map
-              ? e.response?.data['message'] as String?
-              : null;
-          msg = serverMsg ?? 'Server error (${e.response?.statusCode ?? 'unknown'}).';
-      }
-      _addError(msg);
+      _handleDioError(e);
     } catch (e) {
       debugPrint('[AiChat] Exception: $e');
       _addError('Terjadi kesalahan: $e');
     }
   }
+
+  // ── Receipt scan ────────────────────────────────────────────────────────────
+
+  Future<void> scanReceipt(File imageFile) async {
+    // User message shows a thumbnail of the selected image
+    final userMsg = ChatMessage(
+      id: '${DateTime.now().millisecondsSinceEpoch}_user',
+      text: 'Scan struk',
+      isUser: true,
+      imagePath: imageFile.path,
+      timestamp: DateTime.now(),
+    );
+
+    state = state.copyWith(
+      messages: [...state.messages, userMsg],
+      isLoading: true,
+    );
+
+    File? compressed;
+    try {
+      // Compress + resize before uploading
+      compressed = await ImageCompressUtil.compressAndResize(imageFile);
+
+      final formData = FormData.fromMap({
+        'image': await MultipartFile.fromFile(
+          compressed.path,
+          filename: 'receipt.jpg',
+        ),
+      });
+
+      final response = await ApiService().dio.post(
+        '/ai/scan-receipt',
+        data: formData,
+        options: Options(
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout:    const Duration(seconds: 30),
+        ),
+      );
+
+      _handleResults(
+        response.data['data'],
+        labelOverride: (count) => count == 1
+            ? 'Saya membaca 1 transaksi dari struk. Cek detail:'
+            : 'Saya membaca $count transaksi dari struk. Cek detail:',
+      );
+    } on DioException catch (e) {
+      _handleDioError(e);
+    } catch (e) {
+      debugPrint('[AiChat] scanReceipt Exception: $e');
+      _addError('Gagal memproses struk: $e');
+    } finally {
+      // Clean up the compressed temp file
+      if (compressed != null && compressed.existsSync()) {
+        compressed.deleteSync();
+      }
+    }
+  }
+
+  // ── Confirm / Save ──────────────────────────────────────────────────────────
 
   Future<bool> confirmTransaction({
     required AiTransactionResult result,
@@ -185,7 +220,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
     }
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────────────────────
 
   WalletModel? matchWallet(String? hint, List<WalletModel> wallets) {
     if (wallets.isEmpty) return null;
@@ -193,17 +228,14 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
 
     final h = hint.toLowerCase().trim();
 
-    // Exact match
     for (final w in wallets) {
       if (w.name.toLowerCase() == h) return w;
     }
-    // Contains match
     for (final w in wallets) {
       if (w.name.toLowerCase().contains(h) || h.contains(w.name.toLowerCase())) {
         return w;
       }
     }
-    // Type match for cash keywords
     if (h == 'cash' || h == 'tunai' || h == 'uang tunai') {
       for (final w in wallets) {
         if (w.type == 'cash') return w;
@@ -235,6 +267,58 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
       }
     }
     return filtered.first;
+  }
+
+  // ── Private ──────────────────────────────────────────────────────────────────
+
+  void _handleResults(
+    dynamic rawData, {
+    String Function(int count)? labelOverride,
+  }) {
+    final List<AiTransactionResult> results;
+    if (rawData is List) {
+      results = AiTransactionResult.fromJsonList(rawData);
+    } else {
+      results = [AiTransactionResult.fromJson(rawData as Map<String, dynamic>)];
+    }
+
+    final text = labelOverride != null
+        ? labelOverride(results.length)
+        : (results.length == 1
+            ? _typeLabel(results.first.type)
+            : 'Saya mendeteksi ${results.length} transaksi. Cek detail di bawah:');
+
+    final aiMsg = ChatMessage(
+      id: '${DateTime.now().millisecondsSinceEpoch}_ai',
+      text: text,
+      isUser: false,
+      transactionResults: results,
+      timestamp: DateTime.now(),
+    );
+
+    state = state.copyWith(
+      messages: [...state.messages, aiMsg],
+      isLoading: false,
+    );
+  }
+
+  void _handleDioError(DioException e) {
+    debugPrint('[AiChat] DioException: ${e.type} | status=${e.response?.statusCode}');
+    final String msg;
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.sendTimeout:
+        msg = 'Koneksi timeout. Pastikan backend berjalan dan coba lagi.';
+      case DioExceptionType.connectionError:
+        msg = 'Tidak dapat terhubung ke server. Pastikan backend berjalan.';
+      default:
+        final serverMsg = e.response?.data is Map
+            ? e.response?.data['message'] as String?
+            : null;
+        msg = serverMsg ?? 'Server error (${e.response?.statusCode ?? 'unknown'}).';
+    }
+    _addError(msg);
   }
 
   void _addError(String text) {

@@ -45,71 +45,83 @@ class MainScaffold extends StatelessWidget {
   }
 
   Widget _buildBottomNav(BuildContext context, int currentIndex) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 20,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _NavItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                isSelected: currentIndex == 0,
-                onTap: () => context.go('/home'),
-              ),
-              _NavItem(
-                icon: Icons.receipt_long_rounded,
-                label: 'Transaksi',
-                isSelected: currentIndex == 1,
-                onTap: () => context.go('/transaction'),
-              ),
-              // Center + button (add transaction)
-              GestureDetector(
-                onTap: () => _showAddTransaction(context),
-                child: Container(
-                  width: 52,
-                  height: 52,
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x402563EB),
-                        blurRadius: 12,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 26),
-                ),
-              ),
-              _NavItem(
-                icon: Icons.account_balance_wallet_rounded,
-                label: 'Aset',
-                isSelected: currentIndex == 3,
-                onTap: () => context.go('/asset'),
-              ),
-              _NavItem(
-                icon: Icons.settings_rounded,
-                label: 'Pengaturan',
-                isSelected: currentIndex == 4,
-                onTap: () => context.go('/settings'),
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.topCenter,
+      children: [
+        // Nav bar background
+        Container(
+          decoration: const BoxDecoration(
+            color: AppColors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x0F000000),
+                blurRadius: 20,
+                offset: Offset(0, -4),
               ),
             ],
           ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _NavItem(
+                    icon: Icons.home_rounded,
+                    label: 'Home',
+                    isSelected: currentIndex == 0,
+                    onTap: () => context.go('/home'),
+                  ),
+                  _NavItem(
+                    icon: Icons.receipt_long_rounded,
+                    label: 'Transaksi',
+                    isSelected: currentIndex == 1,
+                    onTap: () => context.go('/transaction'),
+                  ),
+                  // Spacer for the floating + button
+                  const SizedBox(width: 56),
+                  _NavItem(
+                    icon: Icons.account_balance_wallet_rounded,
+                    label: 'Aset',
+                    isSelected: currentIndex == 3,
+                    onTap: () => context.go('/asset'),
+                  ),
+                  _NavItem(
+                    icon: Icons.settings_rounded,
+                    label: 'Pengaturan',
+                    isSelected: currentIndex == 4,
+                    onTap: () => context.go('/settings'),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
+        // Floating + button above the nav bar
+        Positioned(
+          top: -26,
+          child: GestureDetector(
+            onTap: () => _showAddTransaction(context),
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: const BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x402563EB),
+                    blurRadius: 14,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

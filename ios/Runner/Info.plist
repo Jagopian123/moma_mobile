@@ -49,6 +49,10 @@
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Moma membutuhkan akses mikrofon untuk mencatat transaksi dengan suara</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Moma membutuhkan kamera untuk memfoto struk transaksi</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Moma membutuhkan akses galeri untuk memilih foto struk transaksi</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Moma menggunakan speech recognition untuk mengubah suara menjadi teks transaksi</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

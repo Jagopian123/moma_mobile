@@ -112,8 +112,8 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
 
     await _stt.listen(
       localeId: localeId,
-      listenFor: const Duration(seconds: 30),
-      pauseFor: const Duration(seconds: 2),
+      listenFor: const Duration(seconds: 60),
+      pauseFor: const Duration(seconds: 30), // PTT: user controls stop manually
       onResult: (result) {
         state = state.copyWith(transcript: result.recognizedWords);
         if (result.finalResult && result.recognizedWords.isNotEmpty) {

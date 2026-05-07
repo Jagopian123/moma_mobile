@@ -32,6 +32,19 @@ class AiTransactionResult {
     );
   }
 
+  AiTransactionResult copyWith({double? amount}) {
+    return AiTransactionResult(
+      type: type,
+      title: title,
+      amount: amount ?? this.amount,
+      categoryName: categoryName,
+      categoryIcon: categoryIcon,
+      walletHint: walletHint,
+      toWalletHint: toWalletHint,
+      description: description,
+    );
+  }
+
   static List<AiTransactionResult> fromJsonList(List<dynamic> list) {
     return list
         .map((e) => AiTransactionResult.fromJson(e as Map<String, dynamic>))
