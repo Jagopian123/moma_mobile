@@ -46,6 +46,10 @@ dependencies:
   fl_chart: ^0.69.0
   percent_indicator: ^4.2.3
 
+  # Security
+  local_auth: ^2.3.0
+  crypto: ^3.0.3
+
   # Utils
   intl: ^0.19.0
   uuid: ^4.5.1

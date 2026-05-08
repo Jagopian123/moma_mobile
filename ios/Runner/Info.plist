@@ -47,6 +47,8 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Moma menggunakan Face ID untuk mengamankan akses ke data keuangan kamu</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Moma membutuhkan akses mikrofon untuk mencatat transaksi dengan suara</string>
 	<key>NSCameraUsageDescription</key>

@@ -8,6 +8,8 @@ import 'core/hive/category_seeder.dart';
 import 'core/router/app_router.dart';
 import 'core/services/api_service.dart';
 import 'core/theme/app_theme.dart';
+import 'features/security/providers/security_provider.dart';
+import 'features/security/widgets/lock_screen.dart';
 
 // Global key untuk ScaffoldMessenger
 // Dipakai supaya snackbar bisa muncul dari mana saja termasuk dalam bottom sheet
@@ -51,11 +53,37 @@ void main() async {
   );
 }
 
-class MomaApp extends ConsumerWidget {
+class MomaApp extends ConsumerStatefulWidget {
   const MomaApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MomaApp> createState() => _MomaAppState();
+}
+
+class _MomaAppState extends ConsumerState<MomaApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Kunci app saat masuk background
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      ref.read(securityProvider.notifier).lock();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
@@ -69,6 +97,15 @@ class MomaApp extends ConsumerWidget {
         DefaultWidgetsLocalizations.delegate,
       ],
       routerConfig: router,
+      builder: (context, child) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final security = ref.watch(securityProvider);
+            if (security.isLocked) return const LockScreen();
+            return child!;
+          },
+        );
+      },
     );
   }
 }

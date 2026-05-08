@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../asset/providers/wallet_provider.dart';
 import '../providers/backup_provider.dart';
+import '../../security/widgets/security_sheet.dart';
 import '../../asset/providers/investment_provider.dart';
 import '../../transaction/providers/transaction_provider.dart';
 import '../../budget/providers/budget_provider.dart';
@@ -176,7 +177,7 @@ class SettingsPage extends ConsumerWidget {
                 iconColor: const Color(0xFFEF4444),
                 label: 'Keamanan',
                 isLast: true,
-                onTap: () => _showComingSoon(context),
+                onTap: () => _showSecuritySheet(context),
               ),
             ],
           ),
@@ -267,6 +268,15 @@ class SettingsPage extends ConsumerWidget {
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
       ),
+    );
+  }
+
+  void _showSecuritySheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const SecuritySheet(),
     );
   }
 

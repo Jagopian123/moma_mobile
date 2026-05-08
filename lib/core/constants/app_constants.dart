@@ -10,6 +10,11 @@ class AppConstants {
   static const String keyIsBalanceVisible = 'is_balance_visible';
   static const String keyLastBackup = 'last_backup_at';
 
+  // Security
+  static const String keySecurityEnabled  = 'security_enabled';
+  static const String keyBiometricEnabled = 'biometric_enabled';
+  static const String keyPinHash          = 'pin_hash';
+
   // API
   //static const String apiBaseUrl = 'https://moma.empatech.id/api/v1';
   static const String apiBaseUrl = 'http://192.168.1.10:8000/api/v1';
