@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/services/api_service.dart';
 import '../../../core/utils/image_compress_util.dart';
@@ -47,6 +49,29 @@ class ChatMessage {
       imagePath: imagePath,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'text': text,
+        'isUser': isUser,
+        'isError': isError,
+        'timestamp': timestamp.toIso8601String(),
+        'imagePath': imagePath,
+        'transactionResults':
+            transactionResults?.map((r) => r.toJson()).toList(),
+      };
+
+  factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
+        id: j['id'] as String,
+        text: j['text'] as String,
+        isUser: j['isUser'] as bool,
+        isError: j['isError'] as bool? ?? false,
+        timestamp: DateTime.parse(j['timestamp'] as String),
+        imagePath: j['imagePath'] as String?,
+        transactionResults: (j['transactionResults'] as List<dynamic>?)
+            ?.map((e) => AiTransactionResult.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -54,18 +79,47 @@ class ChatMessage {
 class AiChatState {
   final List<ChatMessage> messages;
   final bool isLoading;
+  /// cardKey → actual amount that was saved (used to display confirmation text)
+  final Map<String, double> savedAmounts;
+  /// cardKeys that were dismissed
+  final Set<String> dismissedCards;
 
   const AiChatState({
     this.messages = const [],
     this.isLoading = false,
+    this.savedAmounts = const {},
+    this.dismissedCards = const {},
   });
 
-  AiChatState copyWith({List<ChatMessage>? messages, bool? isLoading}) {
+  AiChatState copyWith({
+    List<ChatMessage>? messages,
+    bool? isLoading,
+    Map<String, double>? savedAmounts,
+    Set<String>? dismissedCards,
+  }) {
     return AiChatState(
       messages: messages ?? this.messages,
       isLoading: isLoading ?? this.isLoading,
+      savedAmounts: savedAmounts ?? this.savedAmounts,
+      dismissedCards: dismissedCards ?? this.dismissedCards,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'messages': messages.map((m) => m.toJson()).toList(),
+        'savedAmounts': savedAmounts,
+        'dismissedCards': dismissedCards.toList(),
+      };
+
+  factory AiChatState.fromJson(Map<String, dynamic> j) => AiChatState(
+        messages: (j['messages'] as List<dynamic>)
+            .map((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        savedAmounts: (j['savedAmounts'] as Map<String, dynamic>? ?? {})
+            .map((k, v) => MapEntry(k, (v as num).toDouble())),
+        dismissedCards:
+            (j['dismissedCards'] as List<dynamic>? ?? []).cast<String>().toSet(),
+      );
 }
 
 // ── Notifier ──────────────────────────────────────────────────────────────────
@@ -73,7 +127,36 @@ class AiChatState {
 class AiChatNotifier extends StateNotifier<AiChatState> {
   final Ref _ref;
 
-  AiChatNotifier(this._ref) : super(const AiChatState());
+  AiChatNotifier(this._ref) : super(const AiChatState()) {
+    _load();
+  }
+
+  // ── Persistence ─────────────────────────────────────────────────────────────
+
+  Future<File> _stateFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/ai_chat_state.json');
+  }
+
+  Future<void> _load() async {
+    try {
+      final file = await _stateFile();
+      if (!await file.exists()) return;
+      final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      if (mounted) state = AiChatState.fromJson(json);
+    } catch (e) {
+      debugPrint('[AiChat] Failed to load persisted state: $e');
+    }
+  }
+
+  Future<void> _save() async {
+    try {
+      final file = await _stateFile();
+      await file.writeAsString(jsonEncode(state.toJson()));
+    } catch (e) {
+      debugPrint('[AiChat] Failed to save state: $e');
+    }
+  }
 
   // ── Text / Voice ────────────────────────────────────────────────────────────
 
@@ -220,6 +303,20 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
     }
   }
 
+  void markSaved(String cardKey, double amount) {
+    state = state.copyWith(
+      savedAmounts: {...state.savedAmounts, cardKey: amount},
+    );
+    _save();
+  }
+
+  void markDismissed(String cardKey) {
+    state = state.copyWith(
+      dismissedCards: {...state.dismissedCards, cardKey},
+    );
+    _save();
+  }
+
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
   WalletModel? matchWallet(String? hint, List<WalletModel> wallets) {
@@ -300,6 +397,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
       messages: [...state.messages, aiMsg],
       isLoading: false,
     );
+    _save();
   }
 
   void _handleDioError(DioException e) {
@@ -333,6 +431,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
       messages: [...state.messages, msg],
       isLoading: false,
     );
+    _save();
   }
 
   String _typeLabel(String type) {
@@ -347,6 +446,6 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 final aiChatProvider =
-    StateNotifierProvider.autoDispose<AiChatNotifier, AiChatState>((ref) {
+    StateNotifierProvider<AiChatNotifier, AiChatState>((ref) {
   return AiChatNotifier(ref);
 });

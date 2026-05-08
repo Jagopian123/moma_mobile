@@ -658,6 +658,52 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   }
 }
 
+void _openFullImage(BuildContext context, String path) {
+  showDialog(
+    context: context,
+    barrierColor: Colors.black87,
+    builder: (dialogCtx) => GestureDetector(
+      onTap: () => Navigator.pop(dialogCtx),
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.file(
+                File(path),
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Center(
+                  child: Icon(Icons.broken_image_rounded,
+                      color: Colors.white54, size: 64),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(dialogCtx),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black45,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                  ),
+                  padding: const EdgeInsets.all(6),
+                  child: const Icon(Icons.close_rounded,
+                      color: Colors.white, size: 22),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 // ── User Bubble ───────────────────────────────────────────────────────────────
 
 class _UserBubble extends StatelessWidget {
@@ -693,12 +739,15 @@ class _UserBubble extends StatelessWidget {
                 children: [
                   // Receipt image thumbnail
                   if (imagePath != null)
-                    Image.file(
-                      File(imagePath!),
-                      width: 220,
-                      height: 160,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    GestureDetector(
+                      onTap: () => _openFullImage(context, imagePath!),
+                      child: Image.file(
+                        File(imagePath!),
+                        width: 220,
+                        height: 160,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
                     ),
                   // Label text
                   Padding(
@@ -852,15 +901,16 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
   String? _toWalletId;
   String? _categoryId;
   bool _saving = false;
-  bool _saved = false;
-  bool _dismissed = false;
   late TextEditingController _amountController;
+
+  String get _cardKey =>
+      '${widget.message.id}_${widget.result.title}_${widget.result.amount}';
 
   @override
   void initState() {
     super.initState();
     _amountController = TextEditingController(
-      text: widget.result.amount.toInt().toString(),
+      text: _ThousandsFormatter.format(widget.result.amount.toInt()),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) => _autoSelect());
   }
@@ -930,17 +980,19 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
       category: _categoryById(categories, _categoryId),
     );
     if (mounted) {
-      setState(() {
-        _saving = false;
-        _saved  = success;
-      });
+      setState(() => _saving = false);
+      if (success) {
+        ref.read(aiChatProvider.notifier).markSaved(_cardKey, editedAmount);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_dismissed) return _buildDismissedCard();
-    if (_saved)     return _buildSavedCard();
+    final chatState = ref.watch(aiChatProvider);
+    if (chatState.dismissedCards.contains(_cardKey)) return _buildDismissedCard();
+    final savedAmount = chatState.savedAmounts[_cardKey];
+    if (savedAmount != null) return _buildSavedCard(savedAmount);
     return _buildPreviewCard();
   }
 
@@ -1057,7 +1109,7 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                                 controller: _amountController,
                                 keyboardType: TextInputType.number,
                                 inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
+                                  _ThousandsFormatter(),
                                 ],
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
@@ -1118,10 +1170,10 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                     const SizedBox(height: AppSpacing.xs),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                      child: _buildCategoryDropdown(
+                      child: _buildCategoryRow(
                         selectedId: _categoryId,
-                        categories: parentCategories,
-                        onChanged: (id) => setState(() => _categoryId = id),
+                        allCategories: categories,
+                        parentCategories: parentCategories,
                       ),
                     ),
                   ],
@@ -1139,7 +1191,7 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                           child: OutlinedButton(
                             onPressed: _saving
                                 ? null
-                                : () => setState(() => _dismissed = true),
+                                : () => ref.read(aiChatProvider.notifier).markDismissed(_cardKey),
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: AppColors.border),
                               shape: RoundedRectangleBorder(
@@ -1253,53 +1305,73 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
     );
   }
 
-  Widget _buildCategoryDropdown({
+  Widget _buildCategoryRow({
     required String? selectedId,
-    required List<CategoryModel> categories,
-    required ValueChanged<String?> onChanged,
+    required List<CategoryModel> allCategories,
+    required List<CategoryModel> parentCategories,
   }) {
-    final validId = categories.any((c) => c.id == selectedId) ? selectedId : null;
-    return Row(
-      children: [
-        const Icon(Icons.label_rounded, size: 14, color: AppColors.textSecondary),
-        const SizedBox(width: 6),
-        const Text(
-          'Kategori:',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
+    final selected = selectedId == null
+        ? null
+        : allCategories.where((c) => c.id == selectedId).firstOrNull;
+
+    return GestureDetector(
+      onTap: () => showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => _AiCategorySheet(
+          parentCategories: parentCategories,
+          onSelect: (cat) => setState(() => _categoryId = cat.id),
         ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: DropdownButton<String>(
-            value: validId,
-            isExpanded: true,
-            underline: const SizedBox.shrink(),
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
-            style: const TextStyle(
+      ),
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        children: [
+          const Icon(Icons.label_rounded, size: 14, color: AppColors.textSecondary),
+          const SizedBox(width: 6),
+          const Text(
+            'Kategori:',
+            style: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 13,
-              color: AppColors.textPrimary,
+              fontSize: 12,
+              color: AppColors.textSecondary,
             ),
-            items: categories
-                .map((c) => DropdownMenuItem<String>(
-                      value: c.id,
-                      child: Text(
-                        '${c.icon}  ${c.name}',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ))
-                .toList(),
-            onChanged: onChanged,
           ),
-        ),
-      ],
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Row(
+              children: [
+                if (selected != null) ...[
+                  Text(selected.icon, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 4),
+                ],
+                Expanded(
+                  child: Text(
+                    selected?.name ?? 'Pilih Kategori',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      color: selected != null
+                          ? AppColors.textPrimary
+                          : AppColors.textHint,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: AppColors.textHint,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildSavedCard() {
+  Widget _buildSavedCard(double amount) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
@@ -1329,7 +1401,7 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: Text(
-                      '${widget.result.title} · ${_currencyFmt.format(widget.result.amount)} tersimpan!',
+                      '${widget.result.title} · ${_currencyFmt.format(amount)} tersimpan!',
                       style: const TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 13,
@@ -1609,6 +1681,206 @@ class _DotPulseState extends State<_DotPulse>
           color: AppColors.primary,
           shape: BoxShape.circle,
         ),
+      ),
+    );
+  }
+}
+
+// ── Thousands Separator Formatter ─────────────────────────────────────────────
+
+class _ThousandsFormatter extends TextInputFormatter {
+  static String format(int value) {
+    if (value == 0) return '0';
+    final digits = value.toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) buf.write('.');
+      buf.write(digits[i]);
+    }
+    return buf.toString();
+  }
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll('.', '');
+    if (digits.isEmpty) return newValue.copyWith(text: '');
+    final formatted = format(int.tryParse(digits) ?? 0);
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+// ── AI Category Sheet ─────────────────────────────────────────────────────────
+
+class _AiCategorySheet extends ConsumerStatefulWidget {
+  final List<CategoryModel> parentCategories;
+  final ValueChanged<CategoryModel> onSelect;
+
+  const _AiCategorySheet({
+    required this.parentCategories,
+    required this.onSelect,
+  });
+
+  @override
+  ConsumerState<_AiCategorySheet> createState() => _AiCategorySheetState();
+}
+
+class _AiCategorySheetState extends ConsumerState<_AiCategorySheet> {
+  CategoryModel? _selectedParent;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _selectedParent == null
+        ? widget.parentCategories
+        : ref.read(categoryProvider.notifier).subCategories(_selectedParent!.id);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 4),
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(AppRadius.full),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                if (_selectedParent != null)
+                  IconButton(
+                    onPressed: () => setState(() => _selectedParent = null),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                  ),
+                const SizedBox(width: 4),
+                Text(
+                  _selectedParent?.name ?? 'Pilih Kategori',
+                  style: AppTextStyles.h4,
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          Expanded(
+            child: ListView(
+              children: [
+                if (_selectedParent != null)
+                  ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Color(int.parse(
+                          _selectedParent!.color.replaceFirst('#', '0xFF'),
+                        )).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Center(
+                        child: Text(_selectedParent!.icon,
+                            style: const TextStyle(fontSize: 18)),
+                      ),
+                    ),
+                    title: Text(
+                      'Semua ${_selectedParent!.name}',
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    subtitle: const Text(
+                      'Pilih tanpa subkategori',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.check_circle_outline_rounded,
+                        color: AppColors.primary, size: 20),
+                    onTap: () {
+                      widget.onSelect(_selectedParent!);
+                      Navigator.pop(context);
+                    },
+                  ),
+                ...items.map((cat) {
+                  final hasSubs = _selectedParent == null &&
+                      ref
+                          .read(categoryProvider.notifier)
+                          .subCategories(cat.id)
+                          .isNotEmpty;
+                  return ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Color(int.parse(
+                          cat.color.replaceFirst('#', '0xFF'),
+                        )).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Center(
+                        child: Text(cat.icon,
+                            style: const TextStyle(fontSize: 18)),
+                      ),
+                    ),
+                    title: Text(
+                      cat.name,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: hasSubs
+                        ? const Text(
+                            'Ketuk untuk lihat subkategori',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 11,
+                              color: AppColors.textHint,
+                            ),
+                          )
+                        : null,
+                    trailing: hasSubs
+                        ? const Icon(Icons.chevron_right_rounded,
+                            color: AppColors.textHint)
+                        : null,
+                    onTap: () {
+                      if (hasSubs) {
+                        setState(() => _selectedParent = cat);
+                      } else {
+                        widget.onSelect(cat);
+                        Navigator.pop(context);
+                      }
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

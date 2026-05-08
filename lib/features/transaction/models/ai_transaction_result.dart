@@ -32,6 +32,17 @@ class AiTransactionResult {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+        'type': type,
+        'title': title,
+        'amount': amount,
+        'category_name': categoryName,
+        'category_icon': categoryIcon,
+        'wallet_hint': walletHint,
+        'to_wallet_hint': toWalletHint,
+        'description': description,
+      };
+
   AiTransactionResult copyWith({double? amount}) {
     return AiTransactionResult(
       type: type,
