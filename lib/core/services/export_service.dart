@@ -108,6 +108,11 @@ class ExportService {
 
   // ── Helpers ───────────────────────────────────────────────────
 
+  // Public static sehingga BackupService bisa memakai tanpa instance
+  static Map<String, dynamic> buildBackupMap() {
+    return ExportService()._buildExportData();
+  }
+
   Map<String, dynamic> _buildExportData() {
     final transactions = HiveService.transactions.values.toList();
     final wallets = HiveService.wallets.values.toList();

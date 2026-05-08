@@ -5,6 +5,8 @@ import 'package:dio/dio.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/hive/hive_service.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/backup_service.dart';
+import '../../../core/services/import_service.dart';
 import '../models/user_model.dart';
 import 'auth_state.dart';
 
@@ -82,6 +84,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         _saveUserToHive(user);
 
         state = AuthState.authenticated(user);
+
+        // Auto-restore: jika Hive kosong, coba ambil backup dari server
+        _tryRestoreIfEmpty();
       } else {
         state = AuthState.error(
           response.data['message'] ?? 'Login gagal, coba lagi',
@@ -104,14 +109,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  // Backup dulu sebelum logout (Opsi A: throws jika backup gagal).
+  // SettingsPage menangkap exception dan membatalkan logout.
   Future<void> signOut() async {
+    await BackupService().upload(); // throws jika gagal — logout dibatalkan
+
+    await _googleSignIn.signOut();
     try {
       await _api.post('/auth/logout').timeout(const Duration(seconds: 5));
     } catch (_) {}
 
-    await _googleSignIn.signOut();
+    await HiveService.clearAllUserData();
     _clearHive();
     state = const AuthState.unauthenticated();
+  }
+
+  // Dipanggil setelah login berhasil — tidak blocking, error diabaikan
+  Future<void> _tryRestoreIfEmpty() async {
+    final isEmpty = HiveService.transactions.isEmpty && HiveService.wallets.isEmpty;
+    if (!isEmpty) return;
+    try {
+      await BackupService().downloadAndRestore();
+    } catch (_) {
+      // Gagal restore tidak masalah — user mulai dengan data kosong
+    }
   }
 
   void updateUser(UserModel user) {

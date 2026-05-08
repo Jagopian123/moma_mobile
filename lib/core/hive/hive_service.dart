@@ -57,4 +57,17 @@ class HiveService {
   static Box<InvestmentModel> get investments =>
       Hive.box<InvestmentModel>(investmentBox);
   static Box get user => Hive.box(userBox);
+
+  // Hapus semua data finansial user (wallets, transactions, budgets, dll)
+  // dipanggil saat ganti akun / logout
+  static Future<void> clearAllUserData() async {
+    await Future.wait([
+      wallets.clear(),
+      transactions.clear(),
+      budgets.clear(),
+      financialPlans.clear(),
+      debts.clear(),
+      investments.clear(),
+    ]);
+  }
 }

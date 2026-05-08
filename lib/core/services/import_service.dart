@@ -32,6 +32,17 @@ class ImportService {
   factory ImportService() => _instance;
   ImportService._internal();
 
+  // ── Restore langsung dari Map (dipakai oleh BackupService) ───
+  Future<ImportResult> restoreFromMap(Map<String, dynamic> data) async {
+    if (!_isValidBackup(data)) {
+      return const ImportResult(
+        success: false,
+        message: 'Format backup tidak dikenali',
+      );
+    }
+    return _importData(data, ImportMode.replace);
+  }
+
   // ── Pick & Import file JSON ───────────────────────────────────
 
   Future<ImportResult?> pickAndImport({

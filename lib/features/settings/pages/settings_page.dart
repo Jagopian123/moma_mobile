@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/export_service.dart';
 import '../../../core/services/import_service.dart';
+import 'package:intl/intl.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../asset/providers/wallet_provider.dart';
+import '../providers/backup_provider.dart';
 import '../../asset/providers/investment_provider.dart';
 import '../../transaction/providers/transaction_provider.dart';
 import '../../budget/providers/budget_provider.dart';
@@ -19,6 +21,38 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).user;
+    final backup = ref.watch(backupProvider);
+
+    // Tampilkan snackbar setelah backup manual selesai
+    ref.listen<BackupState>(backupProvider, (prev, next) {
+      if (next.status == BackupStatus.success &&
+          prev?.status == BackupStatus.loading) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Backup berhasil disimpan ke cloud ☁️'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.income,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+          ),
+        );
+        ref.read(backupProvider.notifier).resetStatus();
+      } else if (next.status == BackupStatus.error &&
+          prev?.status == BackupStatus.loading) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Backup gagal: ${next.errorMessage}'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.danger,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+          ),
+        );
+        ref.read(backupProvider.notifier).resetStatus();
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -119,8 +153,17 @@ class SettingsPage extends ConsumerWidget {
                 icon: Icons.cloud_upload_rounded,
                 iconColor: const Color(0xFF06B6D4),
                 label: 'Backup Data',
-                badge: 'Segera',
-                onTap: () => _showComingSoon(context),
+                value: backup.isLoading
+                    ? 'Menyimpan...'
+                    : backup.lastBackedAt != null
+                        ? DateFormat('dd/MM HH:mm').format(backup.lastBackedAt!)
+                        : null,
+                badge: backup.lastBackedAt == null && !backup.isLoading
+                    ? 'Belum pernah'
+                    : null,
+                onTap: backup.isLoading
+                    ? null
+                    : () => ref.read(backupProvider.notifier).backup(),
               ),
               _SettingsItem(
                 icon: Icons.download_rounded,
@@ -605,24 +648,19 @@ class SettingsPage extends ConsumerWidget {
         ),
         title: const Text(
           'Keluar',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600),
         ),
         content: const Text(
-          'Apakah kamu yakin ingin keluar dari akun ini?',
-          style: TextStyle(fontFamily: 'Poppins'),
+          'Data kamu akan dibackup ke cloud sebelum keluar. '
+          'Pastikan terhubung ke internet.',
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text(
               'Batal',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                color: AppColors.textSecondary,
-              ),
+              style: TextStyle(fontFamily: 'Poppins', color: AppColors.textSecondary),
             ),
           ),
           ElevatedButton(
@@ -647,9 +685,71 @@ class SettingsPage extends ConsumerWidget {
       ),
     );
 
-    if (confirm == true && context.mounted) {
+    if (confirm != true || !context.mounted) return;
+
+    // Tampilkan loading — tidak bisa di-dismiss karena sedang backup
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _LogoutLoadingDialog(),
+    );
+
+    try {
       await ref.read(authProvider.notifier).signOut();
-      if (context.mounted) context.go('/login');
+      if (context.mounted) {
+        Navigator.of(context).pop(); // tutup loading dialog
+        context.go('/login');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // tutup loading dialog
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.cloud_off_rounded, color: AppColors.danger),
+                SizedBox(width: 8),
+                Text(
+                  'Backup Gagal',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            content: const Text(
+              'Logout dibatalkan karena backup gagal.\n\n'
+              'Pastikan HP terhubung ke internet lalu coba lagi.',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                ),
+                child: const Text(
+                  'OK',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 }
@@ -805,6 +905,50 @@ class _SettingsItem extends StatelessWidget {
         if (!isLast)
           const Divider(height: 1, indent: 64, color: AppColors.border),
       ],
+    );
+  }
+}
+
+// ── Logout Loading Dialog ─────────────────────────────────────────────────────
+
+class _LogoutLoadingDialog extends StatelessWidget {
+  const _LogoutLoadingDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              strokeWidth: 3,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            const Text(
+              'Menyimpan data ke cloud...',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Mohon tunggu, jangan tutup aplikasi',
+              style: AppTextStyles.caption,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
