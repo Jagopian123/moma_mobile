@@ -17,6 +17,7 @@ import '../../features/financial_plan/pages/financial_plan_page.dart';
 import '../../features/debt/pages/debt_page.dart';
 import '../../features/home/pages/home_page.dart';
 import '../../features/settings/pages/settings_page.dart';
+import '../../features/insights/pages/insights_page.dart';
 
 // ── Placeholder pages ────────────────────────────────────────────────────────
 class PlaceholderPage extends StatelessWidget {
@@ -167,6 +168,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/ai-chat',
         name: 'aiChat',
         builder: (_, __) => const AiChatPage(),
+      ),
+      GoRoute(
+        path: '/insights',
+        name: 'insights',
+        builder: (_, __) => const InsightsPage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

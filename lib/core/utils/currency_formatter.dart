@@ -11,12 +11,16 @@ class CurrencyFormatter {
 
   static String formatCompact(double amount) {
     if (amount >= 1000000000) {
-      return 'Rp${(amount / 1000000000).toStringAsFixed(1)}M';
+      return 'Rp${_strip(amount / 1000000000)}M';
     } else if (amount >= 1000000) {
-      return 'Rp${(amount / 1000000).toStringAsFixed(1)}jt';
+      return 'Rp${_strip(amount / 1000000)}jt';
     } else if (amount >= 1000) {
-      return 'Rp${(amount / 1000).toStringAsFixed(0)}rb';
+      return 'Rp${_strip(amount / 1000)}rb';
     }
     return format(amount);
   }
+
+  // 2 decimal places, trailing zeros stripped: 4.95 → "4.95", 5.0 → "5", 1.5 → "1.5"
+  static String _strip(double v) =>
+      v.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
 }

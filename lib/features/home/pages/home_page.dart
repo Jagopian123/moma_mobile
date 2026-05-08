@@ -17,6 +17,8 @@ import '../../financial_plan/providers/financial_plan_provider.dart';
 import '../../debt/providers/debt_provider.dart';
 import '../../transaction/widgets/transaction_card.dart';
 import '../providers/home_provider.dart';
+import '../../insights/providers/analytics_provider.dart';
+import '../../insights/models/analytics_data.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -123,6 +125,12 @@ class HomePage extends ConsumerWidget {
                     onToggleVisibility: () =>
                         ref.read(balanceVisibleProvider.notifier).toggle(),
                   ),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // ── Insight Card ───────────────────────────────
+                  _HomeInsightSection(
+                    onTap: () => context.push('/insights'),
+                  ),
                   const SizedBox(height: AppSpacing.lg),
 
                   // ── Budget Preview ─────────────────────────────
@@ -200,6 +208,109 @@ class HomePage extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+// ── Home Insight Section ──────────────────────────────────────────────────────
+
+class _HomeInsightSection extends ConsumerWidget {
+  final VoidCallback onTap;
+  const _HomeInsightSection({required this.onTap});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final insights = ref.watch(homeInsightsProvider);
+
+    if (insights.isEmpty) return const SizedBox.shrink();
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          ...insights.take(2).map((insight) {
+            final colors = _insightColors(insight.type);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.$1,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: colors.$2),
+                ),
+                child: Row(
+                  children: [
+                    Text(insight.emoji,
+                        style: const TextStyle(fontSize: 18)),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            insight.title,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: colors.$3,
+                            ),
+                          ),
+                          Text(
+                            insight.body,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 11,
+                              color: colors.$3.withValues(alpha: 0.75),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded,
+                        size: 16, color: colors.$3.withValues(alpha: 0.5)),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  (Color, Color, Color) _insightColors(InsightType type) {
+    switch (type) {
+      case InsightType.positive:
+        return (
+          const Color(0xFFF0FDF4),
+          const Color(0xFFBBF7D0),
+          AppColors.income,
+        );
+      case InsightType.warning:
+        return (
+          const Color(0xFFFFFBEB),
+          const Color(0xFFFDE68A),
+          AppColors.transfer,
+        );
+      case InsightType.danger:
+        return (
+          const Color(0xFFFFF1F2),
+          const Color(0xFFFECACA),
+          AppColors.expense,
+        );
+      default:
+        return (
+          const Color(0xFFF8FAFF),
+          AppColors.border,
+          AppColors.textPrimary,
+        );
+    }
   }
 }
 
