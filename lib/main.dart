@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/hive/hive_service.dart';
@@ -17,6 +18,10 @@ final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load env file sesuai environment (default: production)
+  const env = String.fromEnvironment('ENV', defaultValue: 'production');
+  await dotenv.load(fileName: 'env/.env.$env');
 
   // Init locale data untuk intl (DateFormat, dsb)
   await initializeDateFormatting('id', null);

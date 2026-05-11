@@ -1,3 +1,5 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class AppConstants {
   // Hive user box keys
   static const String keyIsOnboardingDone = 'is_onboarding_done';
@@ -11,14 +13,15 @@ class AppConstants {
   static const String keyLastBackup = 'last_backup_at';
 
   // Security
-  static const String keySecurityEnabled  = 'security_enabled';
+  static const String keySecurityEnabled = 'security_enabled';
   static const String keyBiometricEnabled = 'biometric_enabled';
-  static const String keyPinHash          = 'pin_hash';
+  static const String keyPinHash = 'pin_hash';
 
-  // API
-  //static const String apiBaseUrl = 'https://moma.empatech.id/api/v1';
-  static const String apiBaseUrl = 'http://192.168.1.10:8000/api/v1';
-  // static const String apiBaseUrl = 'http://127.0.0.1:8000/api/v1'; // iOS simulator
+  // Web & API — dibaca dari env/.env.{ENV} saat startup
+  static String get webBaseUrl =>
+      dotenv.env['WEB_URL'] ?? 'https://moma.empatech.id';
+  static String get apiBaseUrl =>
+      dotenv.env['API_URL'] ?? 'https://moma.empatech.id/api/v1';
 
   // Google Sign In
   static const String googleWebClientId =

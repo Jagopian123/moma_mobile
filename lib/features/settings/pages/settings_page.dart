@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/export_service.dart';
 import '../../../core/services/import_service.dart';
@@ -206,7 +208,10 @@ class SettingsPage extends ConsumerWidget {
                 iconColor: const Color(0xFF6366F1),
                 label: 'Kebijakan Privasi',
                 isLast: true,
-                onTap: () => _showComingSoon(context),
+                onTap: () => launchUrl(
+                  Uri.parse('${AppConstants.webBaseUrl}/kebijakan-privasi'),
+                  mode: LaunchMode.externalApplication,
+                ),
               ),
             ],
           ),
@@ -670,7 +675,8 @@ class SettingsPage extends ConsumerWidget {
             onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text(
               'Batal',
-              style: TextStyle(fontFamily: 'Poppins', color: AppColors.textSecondary),
+              style: TextStyle(
+                  fontFamily: 'Poppins', color: AppColors.textSecondary),
             ),
           ),
           ElevatedButton(
