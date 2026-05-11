@@ -425,7 +425,10 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           // ── Input row ─────────────────────────────────────────────
           SafeArea(
             top: false,
-            child: Padding(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
                 vertical: AppSpacing.sm,
@@ -577,6 +580,20 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                   ),
                 ],
               ),
+            ),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'AI dapat membuat kesalahan. Periksa kembali sebelum menyimpan.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 11,
+                      color: AppColors.textHint,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
