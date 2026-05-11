@@ -19,20 +19,18 @@ final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load env file sesuai environment (default: production)
   const env = String.fromEnvironment('ENV', defaultValue: 'production');
-  await dotenv.load(fileName: 'env/.env.$env');
 
-  // Init locale data untuk intl (DateFormat, dsb)
-  await initializeDateFormatting('id', null);
-
-  // Paksa portrait
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
+  // Jalankan init yang tidak saling bergantung secara paralel
+  await Future.wait([
+    dotenv.load(fileName: 'env/.env.$env'),
+    initializeDateFormatting('id', null),
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]),
   ]);
 
-  // Status bar transparan
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -42,10 +40,8 @@ void main() async {
     ),
   );
 
-  // Init Hive
+  // Hive harus selesai sebelum CategorySeeder
   await HiveService.init();
-
-  // Seed kategori default
   await CategorySeeder.seed();
 
   // Init API service (Dio + interceptor)

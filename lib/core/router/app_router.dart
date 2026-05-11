@@ -61,44 +61,64 @@ class PlaceholderPage extends StatelessWidget {
   }
 }
 
+// ── Router Notifier ──────────────────────────────────────────────────────────
+// Memberitahu GoRouter untuk re-run redirect ketika auth/onboarding berubah,
+// tanpa perlu membuat ulang GoRouter instance.
+class _GoRouterNotifier extends ChangeNotifier {
+  _GoRouterNotifier(Ref ref) {
+    ref.listen<dynamic>(authProvider, (_, __) => notifyListeners());
+    ref.listen<dynamic>(onboardingProvider, (_, __) => notifyListeners());
+    _ref = ref;
+  }
+
+  late final Ref _ref;
+
+  String? redirect(GoRouterState state) {
+    final authState = _ref.read(authProvider);
+    final onboardingDone = _ref.read(onboardingProvider);
+    final location = state.matchedLocation;
+    final isAuth = authState.isAuthenticated;
+    final isUnknown = authState.isUnknown;
+
+    // Tunggu saat auth masih loading
+    if (isUnknown) return null;
+
+    // Belum onboarding → onboarding dulu (hanya untuk user yang belum login)
+    // Jika sudah auth, skip — user pasti sudah pernah onboarding sebelumnya.
+    if (!isAuth && !onboardingDone &&
+        location != '/onboarding' &&
+        location != '/splash') {
+      return '/onboarding';
+    }
+
+    // Belum login → ke login
+    if (!isAuth &&
+        location != '/login' &&
+        location != '/onboarding' &&
+        location != '/splash') {
+      return '/login';
+    }
+
+    // Sudah login, masih di auth page → ke home
+    if (isAuth && (location == '/login' || location == '/onboarding')) {
+      return '/home';
+    }
+
+    return null;
+  }
+}
+
 // ── Router Provider ──────────────────────────────────────────────────────────
+// GoRouter dibuat SEKALI dan tidak pernah di-recreate.
+// Auth change hanya men-trigger re-run redirect, bukan recreate router.
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
-  final onboardingDone = ref.watch(onboardingProvider);
+  final notifier = _GoRouterNotifier(ref);
 
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: '/splash',
-    debugLogDiagnostics: true,
-    redirect: (context, state) {
-      final location = state.matchedLocation;
-      final isAuth = authState.isAuthenticated;
-      final isUnknown = authState.isUnknown;
-
-      // Tunggu saat auth masih loading
-      if (isUnknown) return null;
-
-      // Belum onboarding → onboarding dulu
-      if (!onboardingDone &&
-          location != '/onboarding' &&
-          location != '/splash') {
-        return '/onboarding';
-      }
-
-      // Belum login → ke login
-      if (!isAuth &&
-          location != '/login' &&
-          location != '/onboarding' &&
-          location != '/splash') {
-        return '/login';
-      }
-
-      // Sudah login, masih di auth page → ke home
-      if (isAuth && (location == '/login' || location == '/onboarding')) {
-        return '/home';
-      }
-
-      return null;
-    },
+    debugLogDiagnostics: false,
+    refreshListenable: notifier,
+    redirect: (_, state) => notifier.redirect(state),
     routes: [
       GoRoute(
         path: '/splash',
@@ -201,4 +221,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ),
   );
+
+  ref.onDispose(() {
+    notifier.dispose();
+    router.dispose();
+  });
+
+  return router;
 });

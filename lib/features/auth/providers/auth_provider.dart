@@ -6,9 +6,14 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/hive/hive_service.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/backup_service.dart';
-import '../../../core/services/import_service.dart';
 import '../models/user_model.dart';
 import 'auth_state.dart';
+import '../../asset/providers/investment_provider.dart';
+import '../../asset/providers/wallet_provider.dart';
+import '../../budget/providers/budget_provider.dart';
+import '../../debt/providers/debt_provider.dart';
+import '../../financial_plan/providers/financial_plan_provider.dart';
+import '../../transaction/providers/transaction_provider.dart';
 
 final _googleSignIn = GoogleSignIn(
   serverClientId: AppConstants.googleWebClientId,
@@ -16,10 +21,11 @@ final _googleSignIn = GoogleSignIn(
 );
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier() : super(const AuthState.unknown()) {
+  AuthNotifier(this._ref) : super(const AuthState.unknown()) {
     _init();
   }
 
+  final Ref _ref;
   final _api = ApiService();
 
   Future<void> _init() async {
@@ -30,6 +36,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return;
     }
 
+    // Local-first: jika data user sudah ada di Hive, langsung authenticated
+    // tanpa tunggu network. Server diverifikasi di background.
+    final localUser = _getUserFromHive();
+    if (localUser != null) {
+      state = AuthState.authenticated(localUser);
+      _verifyWithServer();
+      return;
+    }
+
+    // Tidak ada data lokal (token orphan) — harus tunggu server
     try {
       final response =
           await _api.get('/auth/me').timeout(const Duration(seconds: 5));
@@ -39,16 +55,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
         _saveUserToHive(user);
         state = AuthState.authenticated(user);
       } else {
-        _clearHive();
+        await _clearHive();
         state = const AuthState.unauthenticated();
       }
     } catch (_) {
-      final localUser = _getUserFromHive();
-      if (localUser != null) {
-        state = AuthState.authenticated(localUser);
+      await _clearHive();
+      state = const AuthState.unauthenticated();
+    }
+  }
+
+  // Verifikasi token ke server di background setelah local-first auth.
+  // Jika token sudah tidak valid → paksa logout.
+  // Jika data user berubah (misal premium) → update state.
+  Future<void> _verifyWithServer() async {
+    try {
+      final response =
+          await _api.get('/auth/me').timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final user = UserModel.fromJson(response.data['data']);
+        _saveUserToHive(user);
+        if (mounted) state = AuthState.authenticated(user);
       } else {
-        state = const AuthState.unauthenticated();
+        // Token ditolak server — paksa logout
+        await _clearHive();
+        if (mounted) state = const AuthState.unauthenticated();
       }
+    } catch (_) {
+      // Offline atau timeout — data lokal tetap valid, tidak perlu logout
     }
   }
 
@@ -79,7 +113,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final token = response.data['data']['token'] as String;
         final user = UserModel.fromJson(response.data['data']['user']);
 
-        // Simpan token ke Hive — interceptor Dio akan otomatis pakai token ini
         await HiveService.user.put(AppConstants.keyAuthToken, token);
         _saveUserToHive(user);
 
@@ -109,10 +142,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  // Backup dulu sebelum logout (Opsi A: throws jika backup gagal).
-  // SettingsPage menangkap exception dan membatalkan logout.
+  // Backup dulu sebelum logout — SettingsPage menangkap exception dan membatalkan logout.
   Future<void> signOut() async {
-    await BackupService().upload(); // throws jika gagal — logout dibatalkan
+    await BackupService().upload();
 
     await _googleSignIn.signOut();
     try {
@@ -120,19 +152,42 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (_) {}
 
     await HiveService.clearAllUserData();
-    _clearHive();
+    await _clearHive();
+    _invalidateDataProviders();
+    state = const AuthState.unauthenticated();
+  }
+
+  Future<void> deleteAccount() async {
+    await _api.delete('/user');
+    await _googleSignIn.signOut();
+    await HiveService.clearAllUserData();
+    await _clearHive();
+    _invalidateDataProviders();
     state = const AuthState.unauthenticated();
   }
 
   // Dipanggil setelah login berhasil — tidak blocking, error diabaikan
   Future<void> _tryRestoreIfEmpty() async {
-    final isEmpty = HiveService.transactions.isEmpty && HiveService.wallets.isEmpty;
+    final isEmpty =
+        HiveService.transactions.isEmpty && HiveService.wallets.isEmpty;
     if (!isEmpty) return;
     try {
-      await BackupService().downloadAndRestore();
+      final restored = await BackupService().downloadAndRestore();
+      if (restored) _invalidateDataProviders();
     } catch (_) {
       // Gagal restore tidak masalah — user mulai dengan data kosong
     }
+  }
+
+  // Flush semua data provider agar mereka re-load dari Hive yang sudah bersih.
+  // Wajib dipanggil setelah logout / ganti akun.
+  void _invalidateDataProviders() {
+    _ref.invalidate(transactionProvider);
+    _ref.invalidate(walletProvider);
+    _ref.invalidate(budgetProvider);
+    _ref.invalidate(debtProvider);
+    _ref.invalidate(financialPlanProvider);
+    _ref.invalidate(investmentProvider);
   }
 
   void updateUser(UserModel user) {
@@ -164,18 +219,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
-  void _clearHive() {
-    HiveService.user.deleteAll([
+  Future<void> _clearHive() async {
+    // Hapus data user dan sesi — tapi JANGAN hapus preferensi perangkat
+    // (keyIsOnboardingDone, keyIsBalanceVisible) karena bukan milik akun.
+    await HiveService.user.deleteAll([
       AppConstants.keyAuthToken,
       AppConstants.keyUserId,
       AppConstants.keyUserName,
       AppConstants.keyUserEmail,
       AppConstants.keyUserAvatar,
       AppConstants.keyIsPremium,
+      AppConstants.keyLastBackup,
+      AppConstants.keySecurityEnabled,
+      AppConstants.keyBiometricEnabled,
+      AppConstants.keyPinHash,
     ]);
   }
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier();
+  return AuthNotifier(ref);
 });

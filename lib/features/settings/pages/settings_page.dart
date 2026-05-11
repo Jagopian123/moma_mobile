@@ -217,7 +217,7 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
 
-          // ── Logout ───────────────────────────────────────────
+          // ── Logout & Hapus Akun ──────────────────────────────
           _SettingsGroup(
             items: [
               _SettingsItem(
@@ -226,8 +226,16 @@ class SettingsPage extends ConsumerWidget {
                 label: 'Keluar dari Akun',
                 labelColor: AppColors.danger,
                 showArrow: false,
-                isLast: true,
                 onTap: () => _confirmLogout(context, ref),
+              ),
+              _SettingsItem(
+                icon: Icons.delete_forever_rounded,
+                iconColor: AppColors.danger,
+                label: 'Hapus Akun',
+                labelColor: AppColors.danger,
+                showArrow: false,
+                isLast: true,
+                onTap: () => _confirmDeleteAccount(context, ref),
               ),
             ],
           ),
@@ -283,6 +291,113 @@ class SettingsPage extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       builder: (_) => const SecuritySheet(),
     );
+  }
+
+  // ── Hapus Akun ────────────────────────────────────────────────
+
+  Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        title: const Text(
+          'Hapus Akun',
+          style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600),
+        ),
+        content: const Text(
+          'Akun dan semua data kamu akan dihapus permanen dari server. '
+          'Data lokal di perangkat ini juga akan dihapus.\n\n'
+          'Tindakan ini tidak bisa dibatalkan.',
+          style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text(
+              'Batal',
+              style: TextStyle(
+                  fontFamily: 'Poppins', color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+            ),
+            child: const Text(
+              'Hapus Akun',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !context.mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.danger),
+                strokeWidth: 3,
+              ),
+              SizedBox(height: AppSpacing.lg),
+              Text(
+                'Menghapus akun...',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      await ref.read(authProvider.notifier).deleteAccount();
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        context.go('/login');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menghapus akun: $e'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+          ),
+        );
+      }
+    }
   }
 
   // ── Data Sheet ────────────────────────────────────────────────
