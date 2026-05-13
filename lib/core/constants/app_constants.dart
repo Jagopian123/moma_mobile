@@ -25,5 +25,5 @@ class AppConstants {
 
   // Google Sign In
   static const String googleWebClientId =
-      '828429949035-tj4hfrkfcm180d5p07n0smvbqcatie52.apps.googleusercontent.com';
+      '640634426800-9j67rvpp1845hc2eutofbnmehtr22e6c.apps.googleusercontent.com';
 }

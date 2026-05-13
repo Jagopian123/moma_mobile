@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
@@ -163,6 +164,23 @@ class _SplashPageState extends ConsumerState<SplashPage>
                             fontSize: 14,
                             color: Colors.white.withOpacity(0.8),
                           ),
+                        ),
+                        const SizedBox(height: 8),
+                        FutureBuilder<PackageInfo>(
+                          future: PackageInfo.fromPlatform(),
+                          builder: (context, snapshot) {
+                            final version = snapshot.hasData
+                                ? 'v${snapshot.data!.version}+${snapshot.data!.buildNumber}'
+                                : '';
+                            return Text(
+                              version,
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 11,
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                            );
+                          },
                         ),
 
                         const SizedBox(height: 48),
