@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/constants/app_constants.dart';
 import '../../../core/hive/models/category_model.dart';
 import '../../../core/hive/models/wallet_model.dart';
 import '../../../core/theme/app_theme.dart';
@@ -240,6 +242,51 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
             ),
           ],
         ),
+        actions: [
+          if (!chatState.isPremium)
+            GestureDetector(
+              onTap: () => context.push('/premium'),
+              child: Container(
+                margin: const EdgeInsets.only(right: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: chatState.isLimitReached
+                      ? AppColors.expense.withValues(alpha: 0.12)
+                      : const Color(0xFF4F46E5).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.bolt_rounded,
+                      size: 13,
+                      color: chatState.isLimitReached
+                          ? AppColors.expense
+                          : const Color(0xFF4F46E5),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      chatState.isLimitReached
+                          ? 'Habis'
+                          : '${chatState.creditsRemaining}/${AppConstants.aiFreeDailyLimit}',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: chatState.isLimitReached
+                            ? AppColors.expense
+                            : const Color(0xFF4F46E5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
       body: Column(
         children: [
@@ -353,6 +400,9 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         }
         final msg = chatState.messages[index];
         if (msg.isUser) return _UserBubble(text: msg.text, imagePath: msg.imagePath);
+        if (msg.isCreditLimit) {
+          return _CreditLimitBubble(onUpgrade: () => context.push('/premium'));
+        }
         if (msg.transactionResults != null && msg.transactionResults!.isNotEmpty) {
           return _TransactionGroup(message: msg, results: msg.transactionResults!);
         }
@@ -861,6 +911,117 @@ class _AiBubble extends StatelessWidget {
   }
 
   Widget _aiAvatar() {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6366F1), Color(0xFF2563EB)],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
+    );
+  }
+}
+
+// ── Credit Limit Bubble ───────────────────────────────────────────────────────
+
+class _CreditLimitBubble extends StatelessWidget {
+  final VoidCallback onUpgrade;
+  const _CreditLimitBubble({required this.onUpgrade});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _aiAvatarWidget(),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(AppRadius.lg),
+                  bottomLeft: Radius.circular(AppRadius.lg),
+                  bottomRight: Radius.circular(AppRadius.lg),
+                ),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.bolt_rounded, color: Colors.amber, size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        'Kredit AI harian habis',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Kamu sudah menggunakan ${AppConstants.aiFreeDailyLimit}x AI hari ini. '
+                    'Upgrade ke Premium untuk catat AI tanpa batas setiap hari.',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: onUpgrade,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                      ),
+                      child: const Text(
+                        'Upgrade ke Premium',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _aiAvatarWidget() {
     return Container(
       width: 28,
       height: 28,

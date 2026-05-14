@@ -149,8 +149,8 @@ class SettingsPage extends ConsumerWidget {
                 icon: Icons.workspace_premium_rounded,
                 iconColor: const Color(0xFF8B5CF6),
                 label: 'Premium',
-                badge: 'Segera',
-                onTap: () => _showComingSoon(context),
+                badge: user?.isPremium == true ? 'Aktif' : null,
+                onTap: () => context.push('/premium'),
               ),
               _SettingsItem(
                 icon: Icons.cloud_upload_rounded,

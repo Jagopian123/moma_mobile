@@ -7,6 +7,7 @@ import '../../features/auth/pages/onboarding_page.dart';
 import '../../features/auth/pages/login_page.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/providers/onboarding_provider.dart';
+import '../../features/premium/pages/premium_page.dart';
 import '../../features/settings/pages/profile_page.dart';
 import '../../shared/widgets/main_scaffold.dart';
 import '../../features/asset/pages/asset_page.dart';
@@ -193,6 +194,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/insights',
         name: 'insights',
         builder: (_, __) => const InsightsPage(),
+      ),
+      GoRoute(
+        path: '/premium',
+        name: 'premium',
+        builder: (_, __) => const PremiumPage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

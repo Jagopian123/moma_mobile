@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../core/constants/app_constants.dart';
+import '../../../core/hive/hive_service.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/utils/image_compress_util.dart';
 import '../../../core/hive/models/wallet_model.dart';
@@ -21,8 +23,8 @@ class ChatMessage {
   final bool isUser;
   final List<AiTransactionResult>? transactionResults;
   final bool isError;
+  final bool isCreditLimit;
   final DateTime timestamp;
-  /// Local path to a receipt image thumbnail (user-side scan message only).
   final String? imagePath;
 
   const ChatMessage({
@@ -31,6 +33,7 @@ class ChatMessage {
     required this.isUser,
     this.transactionResults,
     this.isError = false,
+    this.isCreditLimit = false,
     required this.timestamp,
     this.imagePath,
   });
@@ -45,6 +48,7 @@ class ChatMessage {
       isUser: isUser,
       transactionResults: transactionResults ?? this.transactionResults,
       isError: isError,
+      isCreditLimit: isCreditLimit,
       timestamp: timestamp,
       imagePath: imagePath,
     );
@@ -55,6 +59,7 @@ class ChatMessage {
         'text': text,
         'isUser': isUser,
         'isError': isError,
+        'isCreditLimit': isCreditLimit,
         'timestamp': timestamp.toIso8601String(),
         'imagePath': imagePath,
         'transactionResults':
@@ -66,6 +71,7 @@ class ChatMessage {
         text: j['text'] as String,
         isUser: j['isUser'] as bool,
         isError: j['isError'] as bool? ?? false,
+        isCreditLimit: j['isCreditLimit'] as bool? ?? false,
         timestamp: DateTime.parse(j['timestamp'] as String),
         imagePath: j['imagePath'] as String?,
         transactionResults: (j['transactionResults'] as List<dynamic>?)
@@ -79,27 +85,33 @@ class ChatMessage {
 class AiChatState {
   final List<ChatMessage> messages;
   final bool isLoading;
-  /// cardKey → actual amount that was saved (used to display confirmation text)
+  /// -1 = unlimited (premium), 0..5 = free tier remaining
+  final int creditsRemaining;
   final Map<String, double> savedAmounts;
-  /// cardKeys that were dismissed
   final Set<String> dismissedCards;
 
   const AiChatState({
     this.messages = const [],
     this.isLoading = false,
+    this.creditsRemaining = AppConstants.aiFreeDailyLimit,
     this.savedAmounts = const {},
     this.dismissedCards = const {},
   });
 
+  bool get isLimitReached => creditsRemaining == 0;
+  bool get isPremium => creditsRemaining == -1;
+
   AiChatState copyWith({
     List<ChatMessage>? messages,
     bool? isLoading,
+    int? creditsRemaining,
     Map<String, double>? savedAmounts,
     Set<String>? dismissedCards,
   }) {
     return AiChatState(
       messages: messages ?? this.messages,
       isLoading: isLoading ?? this.isLoading,
+      creditsRemaining: creditsRemaining ?? this.creditsRemaining,
       savedAmounts: savedAmounts ?? this.savedAmounts,
       dismissedCards: dismissedCards ?? this.dismissedCards,
     );
@@ -107,6 +119,7 @@ class AiChatState {
 
   Map<String, dynamic> toJson() => {
         'messages': messages.map((m) => m.toJson()).toList(),
+        'creditsRemaining': creditsRemaining,
         'savedAmounts': savedAmounts,
         'dismissedCards': dismissedCards.toList(),
       };
@@ -115,6 +128,8 @@ class AiChatState {
         messages: (j['messages'] as List<dynamic>)
             .map((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
             .toList(),
+        creditsRemaining:
+            j['creditsRemaining'] as int? ?? AppConstants.aiFreeDailyLimit,
         savedAmounts: (j['savedAmounts'] as Map<String, dynamic>? ?? {})
             .map((k, v) => MapEntry(k, (v as num).toDouble())),
         dismissedCards:
@@ -129,6 +144,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
 
   AiChatNotifier(this._ref) : super(const AiChatState()) {
     _load();
+    _loadCachedCredits();
   }
 
   // ── Persistence ─────────────────────────────────────────────────────────────
@@ -158,6 +174,19 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
     }
   }
 
+  // Credits are also cached in Hive so the counter shows immediately on open
+  void _loadCachedCredits() {
+    final cached = HiveService.user.get(AppConstants.keyAiCreditsRemaining);
+    if (cached != null && mounted) {
+      state = state.copyWith(creditsRemaining: cached as int);
+    }
+  }
+
+  void _updateCredits(int remaining) {
+    HiveService.user.put(AppConstants.keyAiCreditsRemaining, remaining);
+    if (mounted) state = state.copyWith(creditsRemaining: remaining);
+  }
+
   // ── Text / Voice ────────────────────────────────────────────────────────────
 
   Future<void> sendMessage(String text) async {
@@ -180,9 +209,16 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
         options: Options(receiveTimeout: const Duration(seconds: 45)),
       );
 
+      final remaining = response.data['credits_remaining'];
+      if (remaining != null) _updateCredits(remaining as int);
+
       _handleResults(response.data['data']);
     } on DioException catch (e) {
-      _handleDioError(e);
+      if (e.response?.statusCode == 429) {
+        _addCreditLimitMessage();
+      } else {
+        _handleDioError(e);
+      }
     } catch (e) {
       debugPrint('[AiChat] Exception: $e');
       _addError('Terjadi kesalahan: $e');
@@ -192,7 +228,6 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
   // ── Receipt scan ────────────────────────────────────────────────────────────
 
   Future<void> scanReceipt(File imageFile) async {
-    // User message shows a thumbnail of the selected image
     final userMsg = ChatMessage(
       id: '${DateTime.now().millisecondsSinceEpoch}_user',
       text: 'Scan struk',
@@ -208,7 +243,6 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
 
     File? compressed;
     try {
-      // Compress + resize before uploading
       compressed = await ImageCompressUtil.compressAndResize(imageFile);
 
       final formData = FormData.fromMap({
@@ -227,6 +261,9 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
         ),
       );
 
+      final remaining = response.data['credits_remaining'];
+      if (remaining != null) _updateCredits(remaining as int);
+
       _handleResults(
         response.data['data'],
         labelOverride: (count) => count == 1
@@ -234,12 +271,15 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
             : 'Saya membaca $count transaksi dari struk. Cek detail:',
       );
     } on DioException catch (e) {
-      _handleDioError(e);
+      if (e.response?.statusCode == 429) {
+        _addCreditLimitMessage();
+      } else {
+        _handleDioError(e);
+      }
     } catch (e) {
       debugPrint('[AiChat] scanReceipt Exception: $e');
       _addError('Gagal memproses struk: $e');
     } finally {
-      // Clean up the compressed temp file
       if (compressed != null && compressed.existsSync()) {
         compressed.deleteSync();
       }
@@ -395,6 +435,24 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
 
     state = state.copyWith(
       messages: [...state.messages, aiMsg],
+      isLoading: false,
+    );
+    _save();
+  }
+
+  void _addCreditLimitMessage() {
+    _updateCredits(0);
+    final msg = ChatMessage(
+      id: '${DateTime.now().millisecondsSinceEpoch}_limit',
+      text: 'Kredit AI harian kamu sudah habis (${AppConstants.aiFreeDailyLimit}x/hari). '
+          'Upgrade ke Premium untuk catat AI tanpa batas!',
+      isUser: false,
+      isError: false,
+      isCreditLimit: true,
+      timestamp: DateTime.now(),
+    );
+    state = state.copyWith(
+      messages: [...state.messages, msg],
       isLoading: false,
     );
     _save();

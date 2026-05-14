@@ -9,6 +9,7 @@ class AppConstants {
   static const String keyUserEmail = 'user_email';
   static const String keyUserAvatar = 'user_avatar';
   static const String keyIsPremium = 'is_premium';
+  static const String keyPremiumExpiresAt = 'premium_expires_at';
   static const String keyIsBalanceVisible = 'is_balance_visible';
   static const String keyLastBackup = 'last_backup_at';
 
@@ -16,6 +17,9 @@ class AppConstants {
   static const String keySecurityEnabled = 'security_enabled';
   static const String keyBiometricEnabled = 'biometric_enabled';
   static const String keyPinHash = 'pin_hash';
+
+  // AI Credits (cached locally, authoritative value from server)
+  static const String keyAiCreditsRemaining = 'ai_credits_remaining';
 
   // Web & API — dibaca dari env/.env.{ENV} saat startup
   static String get webBaseUrl =>
@@ -26,4 +30,12 @@ class AppConstants {
   // Google Sign In
   static const String googleWebClientId =
       '640634426800-9j67rvpp1845hc2eutofbnmehtr22e6c.apps.googleusercontent.com';
+
+  // Google Play In-App Purchase product IDs
+  static const String iapMonthly = 'moma_premium_monthly';
+  static const String iapYearly = 'moma_premium_yearly';
+  static const Set<String> iapProductIds = {iapMonthly, iapYearly};
+
+  // Free tier AI credit limit per day
+  static const int aiFreeDailyLimit = 5;
 }
