@@ -153,6 +153,12 @@ class SettingsPage extends ConsumerWidget {
                 onTap: () => context.push('/premium'),
               ),
               _SettingsItem(
+                icon: Icons.subscriptions_rounded,
+                iconColor: const Color(0xFF8B5CF6),
+                label: 'Kelola Langganan',
+                onTap: () => context.push('/subscription'),
+              ),
+              _SettingsItem(
                 icon: Icons.cloud_upload_rounded,
                 iconColor: const Color(0xFF06B6D4),
                 label: 'Backup Data (online)',

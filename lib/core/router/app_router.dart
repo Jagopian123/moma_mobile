@@ -19,6 +19,7 @@ import '../../features/debt/pages/debt_page.dart';
 import '../../features/home/pages/home_page.dart';
 import '../../features/settings/pages/settings_page.dart';
 import '../../features/insights/pages/insights_page.dart';
+import '../../features/subscription/pages/subscription_page.dart';
 
 // ── Placeholder pages ────────────────────────────────────────────────────────
 class PlaceholderPage extends StatelessWidget {
@@ -199,6 +200,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/premium',
         name: 'premium',
         builder: (_, __) => const PremiumPage(),
+      ),
+      GoRoute(
+        path: '/subscription',
+        name: 'subscription',
+        builder: (_, __) => const SubscriptionPage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

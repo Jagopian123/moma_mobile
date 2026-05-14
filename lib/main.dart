@@ -43,6 +43,7 @@ void main() async {
   // Hive harus selesai sebelum CategorySeeder
   await HiveService.init();
   await CategorySeeder.seed();
+  await CategorySeeder.ensureSubscriptionCategory();
 
   // Init API service (Dio + interceptor)
   ApiService().init();

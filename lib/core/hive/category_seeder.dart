@@ -201,6 +201,14 @@ class CategorySeeder {
         ],
       },
       {
+        'id': 'cat_subscription',
+        'name': 'Langganan',
+        'icon': '🔄',
+        'color': '#8B5CF6',
+        'type': 'expense',
+        'subs': <Map<String, String>>[],
+      },
+      {
         'id': 'cat_other',
         'name': 'Lainnya',
         'icon': '📦',
@@ -260,5 +268,24 @@ class CategorySeeder {
     }
 
     return result;
+  }
+
+  // Dipanggil setiap init untuk memastikan kategori subscription ada
+  // (untuk user yang sudah punya data sebelum kategori ini ditambahkan)
+  static Future<void> ensureSubscriptionCategory() async {
+    final box = HiveService.categories;
+    if (box.containsKey('cat_subscription')) return;
+    await box.put(
+      'cat_subscription',
+      CategoryModel(
+        id: 'cat_subscription',
+        name: 'Langganan',
+        icon: '🔄',
+        color: '#8B5CF6',
+        parentId: null,
+        type: 'expense',
+        isDefault: true,
+      ),
+    );
   }
 }
