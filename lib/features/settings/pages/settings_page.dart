@@ -155,18 +155,18 @@ class SettingsPage extends ConsumerWidget {
               _SettingsItem(
                 icon: Icons.cloud_upload_rounded,
                 iconColor: const Color(0xFF06B6D4),
-                label: 'Backup Data',
+                label: 'Backup Data (online)',
                 value: backup.isLoading
                     ? 'Menyimpan...'
                     : backup.lastBackedAt != null
                         ? DateFormat('dd/MM HH:mm').format(backup.lastBackedAt!)
                         : null,
                 badge: backup.lastBackedAt == null && !backup.isLoading
-                    ? 'Belum pernah'
+                    ? (user?.isPremium == true ? 'Belum pernah' : 'Premium')
                     : null,
                 onTap: backup.isLoading
                     ? null
-                    : () => ref.read(backupProvider.notifier).backup(),
+                    : () => _confirmBackup(context, ref, user),
               ),
               _SettingsItem(
                 icon: Icons.download_rounded,
@@ -271,6 +271,186 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
+  Future<void> _confirmBackup(BuildContext context, WidgetRef ref, user) async {
+    if (user?.isPremium != true) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.workspace_premium_rounded, color: Color(0xFFF59E0B)),
+              SizedBox(width: 8),
+              Text(
+                'Fitur Premium',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Backup data online hanya tersedia untuk pengguna Premium.\n\n'
+            'Upgrade ke Premium untuk menyimpan data kamu di cloud secara aman.',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'Batal',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.push('/premium');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF59E0B),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+              ),
+              child: const Text(
+                'Upgrade Premium',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.cloud_upload_rounded, color: Color(0xFF06B6D4)),
+            SizedBox(width: 8),
+            Text(
+              'Backup Data',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Data berikut akan disimpan ke server Moma:',
+              style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
+            ),
+            const SizedBox(height: 10),
+            ...[
+              'Transaksi (pemasukan, pengeluaran, transfer)',
+              'Dompet & saldo',
+              'Budget',
+              'Rencana finansial',
+              'Hutang & piutang',
+              'Investasi',
+            ].map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• ', style: TextStyle(fontFamily: 'Poppins', fontSize: 13)),
+                    Expanded(
+                      child: Text(
+                        item,
+                        style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF06B6D4).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.lock_rounded, size: 14, color: Color(0xFF06B6D4)),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Data disimpan secara aman di server Moma dan hanya dapat diakses oleh kamu.',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11,
+                        color: Color(0xFF06B6D4),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Batalkan',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF06B6D4),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+            ),
+            child: const Text(
+              'Backup',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      ref.read(backupProvider.notifier).backup();
+    }
+  }
+
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -295,7 +475,8 @@ class SettingsPage extends ConsumerWidget {
 
   // ── Hapus Akun ────────────────────────────────────────────────
 
-  Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
+  Future<void> _confirmDeleteAccount(
+      BuildContext context, WidgetRef ref) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(

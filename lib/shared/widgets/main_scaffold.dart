@@ -31,7 +31,7 @@ class MainScaffold extends StatelessWidget {
         elevation: 3,
         icon: const Icon(Icons.auto_awesome_rounded, size: 20),
         label: const Text(
-          'AI Catat',
+          'Moma AI',
           style: TextStyle(
             fontFamily: 'Poppins',
             fontSize: 13,
@@ -117,7 +117,8 @@ class MainScaffold extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+              child:
+                  const Icon(Icons.add_rounded, color: Colors.white, size: 28),
             ),
           ),
         ),

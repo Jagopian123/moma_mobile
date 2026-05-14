@@ -7,6 +7,8 @@ class AiTransactionResult {
   final String? walletHint;
   final String? toWalletHint;
   final String? description;
+  /// Tanggal yang diekstrak AI dari input user (null = pakai DateTime.now())
+  final DateTime? date;
 
   const AiTransactionResult({
     required this.type,
@@ -17,9 +19,16 @@ class AiTransactionResult {
     this.walletHint,
     this.toWalletHint,
     this.description,
+    this.date,
   });
 
   factory AiTransactionResult.fromJson(Map<String, dynamic> json) {
+    DateTime? parsedDate;
+    final rawDate = json['date'] as String?;
+    if (rawDate != null && rawDate.isNotEmpty) {
+      parsedDate = DateTime.tryParse(rawDate);
+    }
+
     return AiTransactionResult(
       type: json['type'] as String? ?? 'expense',
       title: json['title'] as String? ?? 'Transaksi',
@@ -29,6 +38,7 @@ class AiTransactionResult {
       walletHint: json['wallet_hint'] as String?,
       toWalletHint: json['to_wallet_hint'] as String?,
       description: json['description'] as String?,
+      date: parsedDate,
     );
   }
 
@@ -41,6 +51,7 @@ class AiTransactionResult {
         'wallet_hint': walletHint,
         'to_wallet_hint': toWalletHint,
         'description': description,
+        'date': date?.toIso8601String(),
       };
 
   AiTransactionResult copyWith({double? amount}) {
@@ -53,6 +64,7 @@ class AiTransactionResult {
       walletHint: walletHint,
       toWalletHint: toWalletHint,
       description: description,
+      date: date,
     );
   }
 

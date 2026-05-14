@@ -168,7 +168,14 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
   Future<void> _save() async {
     try {
       final file = await _stateFile();
-      await file.writeAsString(jsonEncode(state.toJson()));
+      const maxMessages = 30;
+      final trimmed = state.messages.length > maxMessages
+          ? state.copyWith(
+              messages: state.messages
+                  .sublist(state.messages.length - maxMessages),
+            )
+          : state;
+      await file.writeAsString(jsonEncode(trimmed.toJson()));
     } catch (e) {
       debugPrint('[AiChat] Failed to save state: $e');
     }
@@ -294,10 +301,10 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
     required WalletModel? wallet,
     required WalletModel? toWallet,
     required CategoryModel? category,
+    required DateTime date,
   }) async {
     try {
       final txNotifier = _ref.read(transactionProvider.notifier);
-      final now = DateTime.now();
 
       if (result.type == 'income') {
         await txNotifier.addIncome(
@@ -308,7 +315,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
           categoryIcon: category?.icon ?? result.categoryIcon,
           walletId: wallet?.id ?? '',
           walletName: wallet?.name ?? result.walletHint ?? 'Dompet',
-          date: now,
+          date: date,
           description: result.description,
         );
       } else if (result.type == 'transfer') {
@@ -320,7 +327,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
           toWalletId: toWallet?.id ?? '',
           toWalletName: toWallet?.name ?? '',
           adminFee: 0,
-          date: now,
+          date: date,
           description: result.description,
         );
       } else {
@@ -332,7 +339,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
           categoryIcon: category?.icon ?? result.categoryIcon,
           walletId: wallet?.id ?? '',
           walletName: wallet?.name ?? result.walletHint ?? 'Dompet',
-          date: now,
+          date: date,
           description: result.description,
         );
       }

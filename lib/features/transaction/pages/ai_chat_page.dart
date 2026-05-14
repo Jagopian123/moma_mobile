@@ -9,9 +9,11 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/hive/models/category_model.dart';
+import '../../../core/utils/category_matcher.dart';
 import '../../../core/hive/models/wallet_model.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../asset/providers/wallet_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/ai_transaction_result.dart';
 import '../providers/ai_chat_provider.dart';
 import '../providers/category_provider.dart';
@@ -37,6 +39,13 @@ class AiChatPage extends ConsumerStatefulWidget {
 class _AiChatPageState extends ConsumerState<AiChatPage> {
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Scroll to bottom for already-loaded history when page reopens
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+  }
 
   @override
   void dispose() {
@@ -79,14 +88,16 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: const BoxDecoration(
           color: AppColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
         ),
         child: SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 margin: const EdgeInsets.only(bottom: AppSpacing.lg),
                 decoration: BoxDecoration(
                   color: AppColors.border,
@@ -127,7 +138,8 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
     final picker = ImagePicker();
     final xfile = await picker.pickImage(
       source: source,
-      imageQuality: 90, // light pre-quality — ImageCompressUtil does the real work
+      imageQuality:
+          90, // light pre-quality — ImageCompressUtil does the real work
       maxWidth: 2048,
     );
 
@@ -162,6 +174,8 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   Widget build(BuildContext context) {
     final chatState = ref.watch(aiChatProvider);
     final voiceState = ref.watch(voiceProvider);
+    final isPremium = chatState.isPremium ||
+        (ref.watch(authProvider).user?.isPremium == true);
 
     ref.listen(aiChatProvider, (_, __) => _scrollToBottom());
 
@@ -203,7 +217,8 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_rounded,
+              color: AppColors.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Row(
@@ -226,11 +241,91 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text('AI Catat Transaksi', style: AppTextStyles.h4),
-                Text(
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Moma AI', style: AppTextStyles.h4),
+                    const SizedBox(width: 6),
+                    if (isPremium)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                          ),
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.workspace_premium_rounded,
+                                size: 11, color: Colors.white),
+                            SizedBox(width: 2),
+                            Text(
+                              'Premium',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      GestureDetector(
+                        onTap: () => context.push('/premium'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: chatState.isLimitReached
+                                ? AppColors.expense.withValues(alpha: 0.12)
+                                : const Color(0xFF4F46E5)
+                                    .withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.bolt_rounded,
+                                size: 11,
+                                color: chatState.isLimitReached
+                                    ? AppColors.expense
+                                    : const Color(0xFF4F46E5),
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                chatState.isLimitReached
+                                    ? 'Habis'
+                                    : '${chatState.creditsRemaining}/${AppConstants.aiFreeDailyLimit}',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: chatState.isLimitReached
+                                      ? AppColors.expense
+                                      : const Color(0xFF4F46E5),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const Text(
                   'Ketik transaksi dengan bahasa natural',
                   style: TextStyle(
                     fontFamily: 'Poppins',
@@ -242,51 +337,6 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
             ),
           ],
         ),
-        actions: [
-          if (!chatState.isPremium)
-            GestureDetector(
-              onTap: () => context.push('/premium'),
-              child: Container(
-                margin: const EdgeInsets.only(right: AppSpacing.md),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: chatState.isLimitReached
-                      ? AppColors.expense.withValues(alpha: 0.12)
-                      : const Color(0xFF4F46E5).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.full),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.bolt_rounded,
-                      size: 13,
-                      color: chatState.isLimitReached
-                          ? AppColors.expense
-                          : const Color(0xFF4F46E5),
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      chatState.isLimitReached
-                          ? 'Habis'
-                          : '${chatState.creditsRemaining}/${AppConstants.aiFreeDailyLimit}',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: chatState.isLimitReached
-                            ? AppColors.expense
-                            : const Color(0xFF4F46E5),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
       ),
       body: Column(
         children: [
@@ -376,9 +426,13 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         Wrap(
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
-          children: examples.map((e) => _ExampleChip(text: e, onTap: () {
-            _textController.text = e;
-          })).toList(),
+          children: examples
+              .map((e) => _ExampleChip(
+                  text: e,
+                  onTap: () {
+                    _textController.text = e;
+                  }))
+              .toList(),
         ),
       ],
     );
@@ -399,12 +453,15 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           return _buildTypingIndicator();
         }
         final msg = chatState.messages[index];
-        if (msg.isUser) return _UserBubble(text: msg.text, imagePath: msg.imagePath);
+        if (msg.isUser)
+          return _UserBubble(text: msg.text, imagePath: msg.imagePath);
         if (msg.isCreditLimit) {
           return _CreditLimitBubble(onUpgrade: () => context.push('/premium'));
         }
-        if (msg.transactionResults != null && msg.transactionResults!.isNotEmpty) {
-          return _TransactionGroup(message: msg, results: msg.transactionResults!);
+        if (msg.transactionResults != null &&
+            msg.transactionResults!.isNotEmpty) {
+          return _TransactionGroup(
+              message: msg, results: msg.transactionResults!);
         }
         return _AiBubble(text: msg.text, isError: msg.isError);
       },
@@ -458,8 +515,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
 
   Widget _buildInputBar(bool isLoading, VoiceState voiceState) {
     final isListening = voiceState.isListening;
-    final isRequesting =
-        voiceState.status == VoiceStatus.requestingPermission;
+    final isRequesting = voiceState.status == VoiceStatus.requestingPermission;
 
     return Container(
       color: AppColors.white,
@@ -469,8 +525,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           const Divider(height: 1, color: AppColors.border),
 
           // ── Listening banner ──────────────────────────────────────
-          if (isListening)
-            _buildListeningBanner(voiceState),
+          if (isListening) _buildListeningBanner(voiceState),
 
           // ── Input row ─────────────────────────────────────────────
           SafeArea(
@@ -479,162 +534,161 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
-              ),
-              child: Row(
-                children: [
-                  // Text field
-                  Expanded(
-                    child: TextField(
-                      controller: _textController,
-                      enabled: !isLoading,
-                      maxLines: null,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _send(),
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        color: AppColors.textPrimary,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: isListening
-                            ? 'Mendengarkan...'
-                            : 'Ketik atau tahan mic...',
-                        hintStyle: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          color: isListening
-                              ? AppColors.expense.withValues(alpha: 0.6)
-                              : AppColors.textHint,
-                          fontStyle: isListening
-                              ? FontStyle.italic
-                              : FontStyle.normal,
-                        ),
-                        filled: true,
-                        fillColor: isListening
-                            ? const Color(0xFFFEF2F2)
-                            : AppColors.background,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.sm + 2,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.full),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
                   ),
-
-                  const SizedBox(width: AppSpacing.xs + 2),
-
-                  // Camera / receipt scan button
-                  GestureDetector(
-                    onTap: isLoading ? null : _showImagePickerSheet,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(AppRadius.full),
-                      ),
-                      child: Icon(
-                        Icons.camera_alt_rounded,
-                        color: isLoading
-                            ? AppColors.border
-                            : AppColors.textSecondary,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: AppSpacing.xs + 2),
-
-                  // Mic button — tahan untuk rekam, lepas untuk selesai
-                  GestureDetector(
-                    onLongPressStart: isLoading ? null : (_) => _startVoice(),
-                    onLongPressEnd: (_) => _stopVoice(),
-                    onLongPressCancel: () =>
-                        ref.read(voiceProvider.notifier).cancel(),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: isListening
-                            ? AppColors.expense
-                            : AppColors.background,
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.full),
-                      ),
-                      child: isRequesting
-                          ? const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.primary,
-                              ),
-                            )
-                          : Icon(
-                              Icons.mic_rounded,
+                  child: Row(
+                    children: [
+                      // Text field
+                      Expanded(
+                        child: TextField(
+                          controller: _textController,
+                          enabled: !isLoading,
+                          maxLines: null,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _send(),
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: isListening
+                                ? 'Mendengarkan...'
+                                : 'Ketik atau tahan mic...',
+                            hintStyle: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
                               color: isListening
-                                  ? Colors.white
-                                  : AppColors.textSecondary,
-                              size: 20,
+                                  ? AppColors.expense.withValues(alpha: 0.6)
+                                  : AppColors.textHint,
+                              fontStyle: isListening
+                                  ? FontStyle.italic
+                                  : FontStyle.normal,
                             ),
-                    ),
-                  ),
-
-                  const SizedBox(width: AppSpacing.xs + 2),
-
-                  // Send button
-                  GestureDetector(
-                    onTap: isLoading ? null : _send,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        gradient: isLoading
-                            ? null
-                            : const LinearGradient(
-                                colors: [
-                                  Color(0xFF6366F1),
-                                  Color(0xFF2563EB)
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                        color: isLoading ? AppColors.border : null,
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.full),
+                            filled: true,
+                            fillColor: isListening
+                                ? const Color(0xFFFEF2F2)
+                                : AppColors.background,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.sm + 2,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.full),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
                       ),
-                      child: isLoading
-                          ? const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.primary,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.send_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                    ),
+
+                      const SizedBox(width: AppSpacing.xs + 2),
+
+                      // Camera / receipt scan button
+                      GestureDetector(
+                        onTap: isLoading ? null : _showImagePickerSheet,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                          ),
+                          child: Icon(
+                            Icons.camera_alt_rounded,
+                            color: isLoading
+                                ? AppColors.border
+                                : AppColors.textSecondary,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: AppSpacing.xs + 2),
+
+                      // Mic button — tahan untuk rekam, lepas untuk selesai
+                      GestureDetector(
+                        onLongPressStart:
+                            isLoading ? null : (_) => _startVoice(),
+                        onLongPressEnd: (_) => _stopVoice(),
+                        onLongPressCancel: () =>
+                            ref.read(voiceProvider.notifier).cancel(),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isListening
+                                ? AppColors.expense
+                                : AppColors.background,
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                          ),
+                          child: isRequesting
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.primary,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.mic_rounded,
+                                  color: isListening
+                                      ? Colors.white
+                                      : AppColors.textSecondary,
+                                  size: 20,
+                                ),
+                        ),
+                      ),
+
+                      const SizedBox(width: AppSpacing.xs + 2),
+
+                      // Send button
+                      GestureDetector(
+                        onTap: isLoading ? null : _send,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            gradient: isLoading
+                                ? null
+                                : const LinearGradient(
+                                    colors: [
+                                      Color(0xFF6366F1),
+                                      Color(0xFF2563EB)
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                            color: isLoading ? AppColors.border : null,
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                          ),
+                          child: isLoading
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.primary,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.send_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
                 const Padding(
                   padding: EdgeInsets.only(bottom: 8),
                   child: Text(
-                    'AI dapat membuat kesalahan. Periksa kembali sebelum menyimpan.',
+                    'Moma AI can make mistakes.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Poppins',
@@ -654,7 +708,10 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   Widget _buildListeningBanner(VoiceState voiceState) {
     return Container(
       margin: const EdgeInsets.fromLTRB(
-        AppSpacing.md, AppSpacing.xs, AppSpacing.md, 0,
+        AppSpacing.md,
+        AppSpacing.xs,
+        AppSpacing.md,
+        0,
       ),
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -720,7 +777,8 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         ),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
-      child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
+      child:
+          const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
     );
   }
 }
@@ -879,9 +937,7 @@ class _AiBubble extends StatelessWidget {
                 vertical: AppSpacing.sm + 2,
               ),
               decoration: BoxDecoration(
-                color: isError
-                    ? const Color(0xFFFEF2F2)
-                    : AppColors.white,
+                color: isError ? const Color(0xFFFEF2F2) : AppColors.white,
                 borderRadius: const BorderRadius.only(
                   topRight: Radius.circular(AppRadius.lg),
                   bottomLeft: Radius.circular(AppRadius.lg),
@@ -920,7 +976,8 @@ class _AiBubble extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
-      child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
+      child:
+          const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
     );
   }
 }
@@ -1031,7 +1088,8 @@ class _CreditLimitBubble extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
-      child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
+      child:
+          const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
     );
   }
 }
@@ -1066,7 +1124,8 @@ class _TransactionGroup extends StatelessWidget {
 class _TransactionCard extends ConsumerStatefulWidget {
   final ChatMessage message;
   final AiTransactionResult result;
-  const _TransactionCard({super.key, required this.message, required this.result});
+  const _TransactionCard(
+      {super.key, required this.message, required this.result});
 
   @override
   ConsumerState<_TransactionCard> createState() => _TransactionCardState();
@@ -1080,6 +1139,7 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
   String? _categoryId;
   bool _saving = false;
   late TextEditingController _amountController;
+  late DateTime _date;
 
   String get _cardKey =>
       '${widget.message.id}_${widget.result.title}_${widget.result.amount}';
@@ -1090,6 +1150,11 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
     _amountController = TextEditingController(
       text: _ThousandsFormatter.format(widget.result.amount.toInt()),
     );
+    final aiDate = widget.result.date;
+    final now = DateTime.now();
+    _date = aiDate != null
+        ? DateTime(aiDate.year, aiDate.month, aiDate.day, now.hour, now.minute)
+        : now;
     WidgetsBinding.instance.addPostFrameCallback((_) => _autoSelect());
   }
 
@@ -1107,26 +1172,63 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
     setState(() {
       _walletId = notifier.matchWallet(widget.result.walletHint, wallets)?.id;
       if (widget.result.type == 'transfer') {
-        _toWalletId = notifier.matchWallet(widget.result.toWalletHint, wallets)?.id;
+        _toWalletId =
+            notifier.matchWallet(widget.result.toWalletHint, wallets)?.id;
       }
-      _categoryId = notifier.matchCategory(
+
+      // 1. Match main category dari nama yang dikembalikan AI
+      final mainCat = notifier.matchCategory(
         widget.result.categoryName,
         widget.result.type,
         categories,
-      )?.id;
+      );
+
+      if (mainCat != null) {
+        // 2. Cari subcategory dalam main category dari AI
+        final subId = CategoryMatcher.findSubcategoryId(
+          widget.result.title,
+          mainCat.id,
+        );
+
+        if (subId != null) {
+          // Cocok di main category AI → pakai langsung
+          _categoryId =
+              categories.where((c) => c.id == subId).firstOrNull?.id ??
+                  mainCat.id;
+        } else {
+          // 3. Tidak ada subcat di main AI → cari global di semua subcategory
+          final global = CategoryMatcher.findSubcategoryIdGlobal(
+            widget.result.title,
+          );
+          if (global != null) {
+            final (globalSubId, globalParentId) = global;
+            final overrideCat =
+                categories.where((c) => c.id == globalParentId).firstOrNull;
+            final overrideSub =
+                categories.where((c) => c.id == globalSubId).firstOrNull;
+            // Override main + subcat hanya kalau keduanya ada di local data
+            _categoryId = (overrideCat != null && overrideSub != null)
+                ? overrideSub.id
+                : mainCat.id;
+          } else {
+            // Tidak ada match di manapun → pakai main category AI
+            _categoryId = mainCat.id;
+          }
+        }
+      }
     });
   }
 
   Color get _typeColor => switch (widget.result.type) {
-        'income'   => AppColors.income,
+        'income' => AppColors.income,
         'transfer' => AppColors.transfer,
-        _          => AppColors.expense,
+        _ => AppColors.expense,
       };
 
   String get _typeLabel => switch (widget.result.type) {
-        'income'   => 'Pemasukan',
+        'income' => 'Pemasukan',
         'transfer' => 'Transfer',
-        _          => 'Pengeluaran',
+        _ => 'Pengeluaran',
       };
 
   WalletModel? _walletById(List<WalletModel> wallets, String? id) {
@@ -1147,16 +1249,19 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
 
   Future<void> _confirm() async {
     setState(() => _saving = true);
-    final wallets    = ref.read(walletProvider);
+    final wallets = ref.read(walletProvider);
     final categories = ref.read(categoryProvider);
-    final editedAmount = double.tryParse(_amountController.text.replaceAll('.', '')) ?? widget.result.amount;
+    final editedAmount =
+        double.tryParse(_amountController.text.replaceAll('.', '')) ??
+            widget.result.amount;
     final success = await ref.read(aiChatProvider.notifier).confirmTransaction(
-      result:   widget.result.copyWith(amount: editedAmount),
-      messageId: widget.message.id,
-      wallet:   _walletById(wallets, _walletId),
-      toWallet: _walletById(wallets, _toWalletId),
-      category: _categoryById(categories, _categoryId),
-    );
+          result: widget.result.copyWith(amount: editedAmount),
+          messageId: widget.message.id,
+          wallet: _walletById(wallets, _walletId),
+          toWallet: _walletById(wallets, _toWalletId),
+          category: _categoryById(categories, _categoryId),
+          date: _date,
+        );
     if (mounted) {
       setState(() => _saving = false);
       if (success) {
@@ -1168,14 +1273,15 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(aiChatProvider);
-    if (chatState.dismissedCards.contains(_cardKey)) return _buildDismissedCard();
+    if (chatState.dismissedCards.contains(_cardKey))
+      return _buildDismissedCard();
     final savedAmount = chatState.savedAmounts[_cardKey];
     if (savedAmount != null) return _buildSavedCard(savedAmount);
     return _buildPreviewCard();
   }
 
   Widget _buildPreviewCard() {
-    final wallets    = ref.watch(walletProvider);
+    final wallets = ref.watch(walletProvider);
     final categories = ref.watch(categoryProvider);
     final isTransfer = widget.result.type == 'transfer';
 
@@ -1219,7 +1325,10 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                   // Header
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md, AppSpacing.md, AppSpacing.md, 0,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      0,
                     ),
                     child: Row(
                       children: [
@@ -1254,7 +1363,10 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                   // Title & Amount
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0,
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                      AppSpacing.md,
+                      0,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1311,16 +1423,23 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                   ),
 
                   const Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                      AppSpacing.md,
+                      0,
                     ),
                     child: Divider(height: 1, color: AppColors.border),
                   ),
 
                   // Wallet (dari)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                      AppSpacing.md,
+                      0,
+                    ),
                     child: _buildWalletDropdown(
                       label: isTransfer ? 'Dari' : 'Dompet',
                       icon: Icons.account_balance_wallet_rounded,
@@ -1331,23 +1450,32 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                   ),
 
                   if (isTransfer) ...[
-                    const SizedBox(height: AppSpacing.xs),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                        AppSpacing.md,
+                        0,
+                      ),
                       child: _buildWalletDropdown(
                         label: 'Ke',
                         icon: Icons.arrow_forward_rounded,
                         selectedId: _toWalletId,
-                        wallets: wallets.where((w) => w.id != _walletId).toList(),
+                        wallets:
+                            wallets.where((w) => w.id != _walletId).toList(),
                         onChanged: (id) => setState(() => _toWalletId = id),
                       ),
                     ),
                   ],
 
                   if (!isTransfer && parentCategories.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.xs),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.sm,
+                        AppSpacing.md,
+                        0,
+                      ),
                       child: _buildCategoryRow(
                         selectedId: _categoryId,
                         allCategories: categories,
@@ -1356,12 +1484,25 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                     ),
                   ],
 
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                      AppSpacing.md,
+                      0,
+                    ),
+                    child: _buildDateRow(),
+                  ),
+
                   const SizedBox(height: AppSpacing.md),
 
                   // Action buttons
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md, 0, AppSpacing.md, AppSpacing.md,
+                      AppSpacing.md,
+                      0,
+                      AppSpacing.md,
+                      AppSpacing.md,
                     ),
                     child: Row(
                       children: [
@@ -1369,11 +1510,14 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                           child: OutlinedButton(
                             onPressed: _saving
                                 ? null
-                                : () => ref.read(aiChatProvider.notifier).markDismissed(_cardKey),
+                                : () => ref
+                                    .read(aiChatProvider.notifier)
+                                    .markDismissed(_cardKey),
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: AppColors.border),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.md),
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 10),
                             ),
@@ -1398,7 +1542,8 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                               backgroundColor: _typeColor,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.md),
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               elevation: 0,
@@ -1503,50 +1648,117 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
         ),
       ),
       behavior: HitTestBehavior.opaque,
-      child: Row(
-        children: [
-          const Icon(Icons.label_rounded, size: 14, color: AppColors.textSecondary),
-          const SizedBox(width: 6),
-          const Text(
-            'Kategori:',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 12,
-              color: AppColors.textSecondary,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            const Icon(Icons.label_rounded,
+                size: 14, color: AppColors.textSecondary),
+            const SizedBox(width: 6),
+            const Text(
+              'Kategori:',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Row(
-              children: [
-                if (selected != null) ...[
-                  Text(selected.icon, style: const TextStyle(fontSize: 14)),
-                  const SizedBox(width: 4),
-                ],
-                Expanded(
-                  child: Text(
-                    selected?.name ?? 'Pilih Kategori',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13,
-                      color: selected != null
-                          ? AppColors.textPrimary
-                          : AppColors.textHint,
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Row(
+                children: [
+                  if (selected != null) ...[
+                    Text(selected.icon, style: const TextStyle(fontSize: 14)),
+                    const SizedBox(width: 4),
+                  ],
+                  Expanded(
+                    child: Text(
+                      selected?.name ?? 'Pilih Kategori',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        color: selected != null
+                            ? AppColors.textPrimary
+                            : AppColors.textHint,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: 18,
-                  color: AppColors.textHint,
-                ),
-              ],
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                    color: AppColors.textHint,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildDateRow() {
+    final label = DateFormat('d MMM yyyy, HH:mm').format(_date);
+    return GestureDetector(
+      onTap: _pickDate,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today_rounded,
+                size: 14, color: AppColors.textSecondary),
+            const SizedBox(width: 6),
+            const Text(
+              'Tanggal:',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Row(
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.edit_rounded,
+                      size: 13, color: AppColors.textHint),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _date = DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
+        _date.hour,
+        _date.minute,
+      );
+    });
   }
 
   Widget _buildSavedCard(double amount) {
@@ -1570,7 +1782,8 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
                   bottomLeft: Radius.circular(AppRadius.lg),
                   bottomRight: Radius.circular(AppRadius.lg),
                 ),
-                border: Border.all(color: AppColors.income.withValues(alpha: 0.3)),
+                border:
+                    Border.all(color: AppColors.income.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -1643,7 +1856,8 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
         ),
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
-      child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
+      child:
+          const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
     );
   }
 }
@@ -1915,7 +2129,9 @@ class _AiCategorySheetState extends ConsumerState<_AiCategorySheet> {
   Widget build(BuildContext context) {
     final items = _selectedParent == null
         ? widget.parentCategories
-        : ref.read(categoryProvider.notifier).subCategories(_selectedParent!.id);
+        : ref
+            .read(categoryProvider.notifier)
+            .subCategories(_selectedParent!.id);
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
