@@ -153,6 +153,12 @@ class SettingsPage extends ConsumerWidget {
                 onTap: () => context.push('/premium'),
               ),
               _SettingsItem(
+                icon: Icons.category_rounded,
+                iconColor: const Color(0xFF10B981),
+                label: 'Kelola Kategori',
+                onTap: () => context.push('/manage-categories'),
+              ),
+              _SettingsItem(
                 icon: Icons.subscriptions_rounded,
                 iconColor: const Color(0xFF8B5CF6),
                 label: 'Kelola Langganan',
