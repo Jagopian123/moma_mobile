@@ -99,11 +99,13 @@ class _ManageCategoriesPageState extends ConsumerState<ManageCategoriesPage>
             typeFilter: 'expense',
             onEdit: _showForm,
             onDelete: _confirmDelete,
+            onAddSub: _showFormForSub,
           ),
           _CategoryTabView(
             typeFilter: 'income',
             onEdit: _showForm,
             onDelete: _confirmDelete,
+            onAddSub: _showFormForSub,
           ),
         ],
       ),
@@ -157,7 +159,8 @@ class _ManageCategoriesPageState extends ConsumerState<ManageCategoriesPage>
     );
   }
 
-  Future<void> _showForm(CategoryModel? existing) async {
+  Future<void> _showForm(CategoryModel? existing,
+      {CategoryModel? initialParent}) async {
     final all = ref.read(categoryProvider);
     final parents = all.where((c) => c.parentId == null).toList();
     await showModalBottomSheet(
@@ -167,6 +170,7 @@ class _ManageCategoriesPageState extends ConsumerState<ManageCategoriesPage>
       builder: (_) => _CategoryFormSheet(
         existing: existing,
         allParents: parents,
+        initialParent: initialParent,
         onSave: ({
           required String name,
           required String icon,
@@ -175,6 +179,28 @@ class _ManageCategoriesPageState extends ConsumerState<ManageCategoriesPage>
           String? parentId,
         }) async {
           if (existing == null) {
+            final current = ref.read(categoryProvider);
+            if (parentId == null) {
+              final count = current
+                  .where((c) => c.parentId == null && !c.isDefault)
+                  .length;
+              if (count >= 3) {
+                throw Exception(
+                  'Batas 3 kategori utama sudah tercapai.\n'
+                  'Upgrade ke Premium untuk lebih banyak.',
+                );
+              }
+            } else {
+              final count = current
+                  .where((c) => c.parentId != null && !c.isDefault)
+                  .length;
+              if (count >= 6) {
+                throw Exception(
+                  'Batas 6 sub-kategori sudah tercapai.\n'
+                  'Upgrade ke Premium untuk lebih banyak.',
+                );
+              }
+            }
             await ref.read(categoryProvider.notifier).addCategory(
                   name: name,
                   icon: icon,
@@ -194,6 +220,29 @@ class _ManageCategoriesPageState extends ConsumerState<ManageCategoriesPage>
         },
       ),
     );
+  }
+
+  void _showFormForSub(CategoryModel parent) {
+    final all = ref.read(categoryProvider);
+    final subCount =
+        all.where((c) => c.parentId != null && !c.isDefault).length;
+    if (subCount >= 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Batas 6 sub-kategori sudah tercapai. Upgrade ke Premium.',
+            style: TextStyle(fontFamily: 'Poppins'),
+          ),
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      );
+      return;
+    }
+    _showForm(null, initialParent: parent);
   }
 
   Future<void> _confirmDelete(CategoryModel cat) async {
@@ -303,11 +352,13 @@ class _CategoryTabView extends ConsumerWidget {
   final String typeFilter;
   final void Function(CategoryModel?) onEdit;
   final void Function(CategoryModel) onDelete;
+  final void Function(CategoryModel) onAddSub;
 
   const _CategoryTabView({
     required this.typeFilter,
     required this.onEdit,
     required this.onDelete,
+    required this.onAddSub,
   });
 
   @override
@@ -344,6 +395,7 @@ class _CategoryTabView extends ConsumerWidget {
           subs: subs,
           onEdit: onEdit,
           onDelete: onDelete,
+          onAddSub: () => onAddSub(parent),
         );
       },
     );
@@ -352,22 +404,31 @@ class _CategoryTabView extends ConsumerWidget {
 
 // ── Parent Tile ───────────────────────────────────────────────────────────────
 
-class _ParentTile extends StatelessWidget {
+class _ParentTile extends StatefulWidget {
   final CategoryModel parent;
   final List<CategoryModel> subs;
   final void Function(CategoryModel) onEdit;
   final void Function(CategoryModel) onDelete;
+  final VoidCallback onAddSub;
 
   const _ParentTile({
     required this.parent,
     required this.subs,
     required this.onEdit,
     required this.onDelete,
+    required this.onAddSub,
   });
 
   @override
+  State<_ParentTile> createState() => _ParentTileState();
+}
+
+class _ParentTileState extends State<_ParentTile> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
-    final catColor = _hexToColor(parent.color);
+    final catColor = _hexToColor(widget.parent.color);
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -384,6 +445,7 @@ class _ParentTile extends StatelessWidget {
             vertical: 4,
           ),
           childrenPadding: EdgeInsets.zero,
+          onExpansionChanged: (val) => setState(() => _expanded = val),
           leading: Container(
             width: 40,
             height: 40,
@@ -392,52 +454,68 @@ class _ParentTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Center(
-              child: Text(parent.icon, style: const TextStyle(fontSize: 20)),
+              child: Text(widget.parent.icon,
+                  style: const TextStyle(fontSize: 20)),
             ),
           ),
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  parent.name,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              _TypeBadge(type: parent.type),
-              if (parent.isDefault) ...[
-                const SizedBox(width: 6),
-                _SystemBadge(),
-              ],
-            ],
+          title: Text(
+            widget.parent.name,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
           ),
-          subtitle: subs.isNotEmpty
-              ? Text(
-                  '${subs.length} sub-kategori',
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 11,
-                    color: AppColors.textHint,
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Row(
+              children: [
+                _TypeBadge(type: widget.parent.type),
+                if (widget.parent.isDefault) ...[
+                  const SizedBox(width: 4),
+                  _SystemBadge(),
+                ],
+                if (widget.subs.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '· ${widget.subs.length} sub',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 11,
+                      color: AppColors.textHint,
+                    ),
                   ),
-                )
-              : null,
-          trailing: parent.isDefault
-              ? const Icon(Icons.expand_more_rounded, color: AppColors.textHint)
-              : PopupMenuButton<String>(
-                  icon: const Icon(
-                    Icons.more_vert_rounded,
-                    color: AppColors.textHint,
-                    size: 20,
+                ],
+              ],
+            ),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              PopupMenuButton<String>(
+                icon: const Icon(
+                  Icons.more_vert_rounded,
+                  color: AppColors.textHint,
+                  size: 20,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'add_sub',
+                    child: Row(
+                      children: [
+                        Icon(Icons.add_rounded,
+                            size: 18, color: AppColors.textSecondary),
+                        SizedBox(width: 10),
+                        Text('Tambah Sub-Kategori',
+                            style: TextStyle(fontFamily: 'Poppins')),
+                      ],
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  itemBuilder: (_) => [
+                  if (!widget.parent.isDefault) ...[
                     const PopupMenuItem(
                       value: 'edit',
                       child: Row(
@@ -465,11 +543,28 @@ class _ParentTile extends StatelessWidget {
                       ),
                     ),
                   ],
-                  onSelected: (v) =>
-                      v == 'edit' ? onEdit(parent) : onDelete(parent),
-                ),
+                ],
+                onSelected: (v) {
+                  switch (v) {
+                    case 'add_sub':
+                      widget.onAddSub();
+                    case 'edit':
+                      widget.onEdit(widget.parent);
+                    case 'delete':
+                      widget.onDelete(widget.parent);
+                  }
+                },
+              ),
+              AnimatedRotation(
+                turns: _expanded ? 0.5 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: const Icon(Icons.expand_more_rounded,
+                    color: AppColors.textHint, size: 20),
+              ),
+            ],
+          ),
           children: [
-            if (subs.isEmpty)
+            if (widget.subs.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: AppSpacing.md,
@@ -485,11 +580,11 @@ class _ParentTile extends StatelessWidget {
                 ),
               )
             else
-              ...subs.map((sub) => _SubTile(
+              ...widget.subs.map((sub) => _SubTile(
                     sub: sub,
                     parentColor: catColor,
-                    onEdit: () => onEdit(sub),
-                    onDelete: () => onDelete(sub),
+                    onEdit: () => widget.onEdit(sub),
+                    onDelete: () => widget.onDelete(sub),
                   )),
             const SizedBox(height: 4),
           ],
@@ -662,12 +757,14 @@ typedef _OnSave = Future<void> Function({
 class _CategoryFormSheet extends StatefulWidget {
   final CategoryModel? existing;
   final List<CategoryModel> allParents;
+  final CategoryModel? initialParent;
   final _OnSave onSave;
 
   const _CategoryFormSheet({
     required this.existing,
     required this.allParents,
     required this.onSave,
+    this.initialParent,
   });
 
   @override
@@ -682,6 +779,7 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
   String _type = 'expense';
   CategoryModel? _selectedParent;
   bool _loading = false;
+  String? _errorMsg;
 
   bool get _isEdit => widget.existing != null;
 
@@ -700,6 +798,9 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
             .where((p) => p.id == e.parentId)
             .firstOrNull;
       }
+    } else if (widget.initialParent != null) {
+      _isSubCategory = true;
+      _selectedParent = widget.initialParent;
     }
   }
 
@@ -738,7 +839,10 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
       return;
     }
 
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _errorMsg = null;
+    });
     try {
       final parentId = _isSubCategory ? _selectedParent!.id : null;
       final color = _isSubCategory ? _selectedParent!.color : _selectedColor;
@@ -752,22 +856,15 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
         parentId: parentId,
       );
       if (mounted) Navigator.pop(context);
+    } on Exception catch (e) {
+      _showError(e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, style: const TextStyle(fontFamily: 'Poppins')),
-        backgroundColor: AppColors.danger,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-      ),
-    );
+    setState(() => _errorMsg = msg);
   }
 
   @override
@@ -1022,6 +1119,40 @@ class _CategoryFormSheetState extends State<_CategoryFormSheet> {
               const SizedBox(height: AppSpacing.lg),
             ] else ...[
               const SizedBox(height: AppSpacing.lg),
+            ],
+
+            // ── Error banner ──────────────────────────────────────
+            if (_errorMsg != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(
+                      color: AppColors.danger.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: AppColors.danger, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _errorMsg!,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          color: AppColors.danger,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
             ],
 
             // ── Save button ───────────────────────────────────────

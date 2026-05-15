@@ -46,6 +46,8 @@ class _SubscriptionFormSheetState extends ConsumerState<SubscriptionFormSheet> {
   DateTime _startDate = DateTime.now();
   WalletModel? _wallet;
 
+  String? _errorMsg;
+
   bool get _isEdit => widget.existing != null;
   bool get _isCustom => _selectedPreset == _kCustom;
 
@@ -107,38 +109,22 @@ class _SubscriptionFormSheetState extends ConsumerState<SubscriptionFormSheet> {
   }
 
   Future<void> _submit() async {
+    setState(() => _errorMsg = null);
+
     if (_selectedPreset == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Pilih layanan terlebih dahulu'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.danger,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md)),
-      ));
+      setState(() => _errorMsg = 'Pilih layanan terlebih dahulu');
       return;
     }
 
     final name = _isCustom ? _customNameCtrl.text.trim() : _selectedPreset!.name;
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Nama layanan tidak boleh kosong'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.danger,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md)),
-      ));
+      setState(() => _errorMsg = 'Nama layanan tidak boleh kosong');
       return;
     }
 
     final amount = double.tryParse(_amountCtrl.text.replaceAll('.', '')) ?? 0;
     if (amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Jumlah tagihan tidak boleh kosong'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.danger,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md)),
-      ));
+      setState(() => _errorMsg = 'Jumlah tagihan tidak boleh kosong');
       return;
     }
     final icon = _isCustom ? _customIcon : _selectedPreset!.icon;
@@ -313,6 +299,36 @@ class _SubscriptionFormSheetState extends ConsumerState<SubscriptionFormSheet> {
         ),
         const SizedBox(height: AppSpacing.lg),
 
+        // ── Error banner ─────────────────────────────────────────
+        if (_errorMsg != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.danger.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded,
+                    color: AppColors.danger, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _errorMsg!,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 12,
+                      color: AppColors.danger,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+
         // ── Submit ───────────────────────────────────────────────
         SizedBox(
           width: double.infinity,
@@ -378,7 +394,7 @@ class _SubscriptionFormSheetState extends ConsumerState<SubscriptionFormSheet> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (isCustomEntry)
-                  Icon(Icons.add_circle_outline_rounded,
+                  const Icon(Icons.add_circle_outline_rounded,
                       size: 30, color: AppColors.textHint)
                 else
                   Text(preset.icon, style: const TextStyle(fontSize: 28)),

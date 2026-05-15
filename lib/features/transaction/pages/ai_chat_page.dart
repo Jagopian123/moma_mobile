@@ -1176,43 +1176,69 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
             notifier.matchWallet(widget.result.toWalletHint, wallets)?.id;
       }
 
-      // 1. Match main category dari nama yang dikembalikan AI
-      final mainCat = notifier.matchCategory(
+      // 1. Match category dari nama yang dikembalikan AI (parent atau sub user)
+      final matchedCat = notifier.matchCategory(
         widget.result.categoryName,
         widget.result.type,
         categories,
       );
 
-      if (mainCat != null) {
-        // 2. Cari subcategory dalam main category dari AI
-        final subId = CategoryMatcher.findSubcategoryId(
-          widget.result.title,
-          mainCat.id,
-        );
-
-        if (subId != null) {
-          // Cocok di main category AI → pakai langsung
-          _categoryId =
-              categories.where((c) => c.id == subId).firstOrNull?.id ??
-                  mainCat.id;
+      if (matchedCat != null) {
+        if (matchedCat.parentId != null) {
+          // AI mengembalikan sub-kategori user → pakai langsung
+          _categoryId = matchedCat.id;
+        } else if (!matchedCat.isDefault) {
+          // AI mengembalikan parent kategori user → pakai langsung,
+          // CategoryMatcher tidak tahu sub-kategori user jadi skip
+          _categoryId = matchedCat.id;
         } else {
-          // 3. Tidak ada subcat di main AI → cari global di semua subcategory
-          final global = CategoryMatcher.findSubcategoryIdGlobal(
-            widget.result.title,
-          );
-          if (global != null) {
-            final (globalSubId, globalParentId) = global;
-            final overrideCat =
-                categories.where((c) => c.id == globalParentId).firstOrNull;
-            final overrideSub =
-                categories.where((c) => c.id == globalSubId).firstOrNull;
-            // Override main + subcat hanya kalau keduanya ada di local data
-            _categoryId = (overrideCat != null && overrideSub != null)
-                ? overrideSub.id
-                : mainCat.id;
+          // AI mengembalikan parent sistem → cek user subs dulu, baru CategoryMatcher
+          final titleLower = widget.result.title.toLowerCase();
+          final userSubMatch = categories
+              .where((c) => c.parentId == matchedCat.id && !c.isDefault)
+              .cast<CategoryModel?>()
+              .firstWhere(
+                (c) =>
+                    c!.name.toLowerCase() == titleLower ||
+                    titleLower.contains(c.name.toLowerCase()) ||
+                    c.name.toLowerCase().contains(titleLower),
+                orElse: () => null,
+              );
+
+          if (userSubMatch != null) {
+            // Ada user sub yang cocok → pakai, skip CategoryMatcher
+            _categoryId = userSubMatch.id;
           } else {
-            // Tidak ada match di manapun → pakai main category AI
-            _categoryId = mainCat.id;
+            final subId = CategoryMatcher.findSubcategoryId(
+              widget.result.title,
+              matchedCat.id,
+            );
+
+            if (subId != null) {
+              _categoryId =
+                  categories.where((c) => c.id == subId).firstOrNull?.id ??
+                      matchedCat.id;
+            } else {
+              final global = CategoryMatcher.findSubcategoryIdGlobal(
+                widget.result.title,
+              );
+              if (global != null) {
+                final (globalSubId, globalParentId) = global;
+                final overrideCat =
+                    categories.where((c) => c.id == globalParentId).firstOrNull;
+                final overrideSub =
+                    categories.where((c) => c.id == globalSubId).firstOrNull;
+                // Hanya override jika tipe parent cocok dengan tipe transaksi
+                final typeMatches = overrideCat != null &&
+                    (overrideCat.type == widget.result.type ||
+                        overrideCat.type == 'both');
+                _categoryId = (typeMatches && overrideSub != null)
+                    ? overrideSub.id
+                    : matchedCat.id;
+              } else {
+                _categoryId = matchedCat.id;
+              }
+            }
           }
         }
       }

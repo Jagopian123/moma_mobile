@@ -196,6 +196,38 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
 
   // ── Text / Voice ────────────────────────────────────────────────────────────
 
+  // Builds user-created categories payload to send to AI
+  List<Map<String, dynamic>> _buildUserCategories() {
+    final all = HiveService.categories.values.toList();
+    final result = <Map<String, dynamic>>[];
+
+    // User-created parent categories + their user subs
+    final userParents =
+        all.where((c) => c.parentId == null && !c.isDefault).toList();
+    for (final parent in userParents) {
+      final subs = all
+          .where((c) => c.parentId == parent.id && !c.isDefault)
+          .map((s) => s.name)
+          .toList();
+      result.add({'name': parent.name, 'type': parent.type, 'subs': subs});
+    }
+
+    // System parent categories that have user sub-categories
+    final systemParents =
+        all.where((c) => c.parentId == null && c.isDefault).toList();
+    for (final parent in systemParents) {
+      final userSubs = all
+          .where((c) => c.parentId == parent.id && !c.isDefault)
+          .map((s) => s.name)
+          .toList();
+      if (userSubs.isNotEmpty) {
+        result.add({'name': parent.name, 'type': parent.type, 'subs': userSubs});
+      }
+    }
+
+    return result;
+  }
+
   Future<void> sendMessage(String text) async {
     final userMsg = ChatMessage(
       id: '${DateTime.now().millisecondsSinceEpoch}_user',
@@ -212,7 +244,10 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
     try {
       final response = await ApiService().dio.post(
         '/ai/parse-transaction',
-        data: {'message': text},
+        data: {
+          'message': text,
+          'user_categories': _buildUserCategories(),
+        },
         options: Options(receiveTimeout: const Duration(seconds: 45)),
       );
 
@@ -257,6 +292,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
           compressed.path,
           filename: 'receipt.jpg',
         ),
+        'user_categories': jsonEncode(_buildUserCategories()),
       });
 
       final response = await ApiService().dio.post(
@@ -396,21 +432,34 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
     if (name == null) return null;
 
     final n = name.toLowerCase().trim();
-    final filtered = categories
+    final parents = categories
         .where((c) => c.parentId == null && (c.type == type || c.type == 'both'))
         .toList();
+    final subs = categories.where((c) => c.parentId != null).toList();
 
-    if (filtered.isEmpty) return null;
+    if (parents.isEmpty) return null;
 
-    for (final c in filtered) {
+    // 1. Exact match parents
+    for (final c in parents) {
       if (c.name.toLowerCase() == n) return c;
     }
-    for (final c in filtered) {
+    // 2. Exact match subs
+    for (final c in subs) {
+      if (c.name.toLowerCase() == n) return c;
+    }
+    // 3. Contains match parents
+    for (final c in parents) {
       if (c.name.toLowerCase().contains(n) || n.contains(c.name.toLowerCase())) {
         return c;
       }
     }
-    return filtered.first;
+    // 4. Contains match subs
+    for (final c in subs) {
+      if (c.name.toLowerCase().contains(n) || n.contains(c.name.toLowerCase())) {
+        return c;
+      }
+    }
+    return parents.first;
   }
 
   // ── Private ──────────────────────────────────────────────────────────────────
