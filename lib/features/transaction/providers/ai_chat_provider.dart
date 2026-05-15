@@ -196,6 +196,12 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
 
   // ── Text / Voice ────────────────────────────────────────────────────────────
 
+  List<Map<String, dynamic>> _buildUserWallets() {
+    return HiveService.wallets.values
+        .map((w) => {'name': w.name, 'type': w.type})
+        .toList();
+  }
+
   // Builds user-created categories payload to send to AI
   List<Map<String, dynamic>> _buildUserCategories() {
     final all = HiveService.categories.values.toList();
@@ -247,6 +253,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
         data: {
           'message': text,
           'user_categories': _buildUserCategories(),
+          'user_wallets': _buildUserWallets(),
         },
         options: Options(receiveTimeout: const Duration(seconds: 45)),
       );
