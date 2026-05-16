@@ -18,7 +18,6 @@ import '../../debt/providers/debt_provider.dart';
 import '../../transaction/widgets/transaction_card.dart';
 import '../providers/home_provider.dart';
 import '../../insights/providers/analytics_provider.dart';
-import '../../insights/models/analytics_data.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -220,98 +219,102 @@ class _HomeInsightSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final insights = ref.watch(homeInsightsProvider);
-
     if (insights.isEmpty) return const SizedBox.shrink();
+
+    final insight = insights.first;
 
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        children: [
-          ...insights.take(2).map((insight) {
-            final colors = _insightColors(insight.type);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.$1,
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                  border: Border.all(color: colors.$2),
-                ),
-                child: Row(
-                  children: [
-                    Text(insight.emoji,
-                        style: const TextStyle(fontSize: 18)),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            insight.title,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: colors.$3,
-                            ),
-                          ),
-                          Text(
-                            insight.body,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 11,
-                              color: colors.$3.withValues(alpha: 0.75),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF6FF),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            // Content — right padding leaves room for mascot
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                100,
+                AppSpacing.md,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Label
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 12,
+                        color: Color(0xFF6366F1),
                       ),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'AI Insight',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF6366F1),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    insight.title,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
                     ),
-                    Icon(Icons.chevron_right_rounded,
-                        size: 16, color: colors.$3.withValues(alpha: 0.5)),
-                  ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    insight.body,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            // Mascot — anchored bottom-right
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Image.asset(
+                'assets/images/mascot.png',
+                width: 90,
+                height: 90,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const SizedBox(
+                  width: 90,
+                  height: 90,
+                  child: Center(
+                    child: Text('🤖', style: TextStyle(fontSize: 40)),
+                  ),
                 ),
               ),
-            );
-          }),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  (Color, Color, Color) _insightColors(InsightType type) {
-    switch (type) {
-      case InsightType.positive:
-        return (
-          const Color(0xFFF0FDF4),
-          const Color(0xFFBBF7D0),
-          AppColors.income,
-        );
-      case InsightType.warning:
-        return (
-          const Color(0xFFFFFBEB),
-          const Color(0xFFFDE68A),
-          AppColors.transfer,
-        );
-      case InsightType.danger:
-        return (
-          const Color(0xFFFFF1F2),
-          const Color(0xFFFECACA),
-          AppColors.expense,
-        );
-      default:
-        return (
-          const Color(0xFFF8FAFF),
-          AppColors.border,
-          AppColors.textPrimary,
-        );
-    }
-  }
 }
 
 class _EmptyPreviewCard extends StatelessWidget {
@@ -339,7 +342,7 @@ class _EmptyPreviewCard extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppColors.safe.withOpacity(0.12),
+              color: AppColors.safe.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -419,7 +422,7 @@ class _BalanceCard extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 13,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
               const Spacer(),
@@ -429,7 +432,7 @@ class _BalanceCard extends StatelessWidget {
                   isVisible
                       ? Icons.visibility_rounded
                       : Icons.visibility_off_rounded,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   size: 20,
                 ),
               ),
@@ -501,7 +504,7 @@ class _BalanceStat extends StatelessWidget {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color, size: 16),
@@ -515,7 +518,7 @@ class _BalanceStat extends StatelessWidget {
               style: TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 11,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
             Text(

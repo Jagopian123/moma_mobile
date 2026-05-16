@@ -47,6 +47,7 @@ class FinancialPlanPage extends ConsumerWidget {
       body: plans.isEmpty
           ? AppEmptyState(
               emoji: '🎯',
+              imagePath: 'assets/images/mascot-plan.png',
               title: 'Belum ada rencana',
               description: 'Tambahkan rencana finansialmu dan mulai menabung',
               actionLabel: 'Tambah Rencana',

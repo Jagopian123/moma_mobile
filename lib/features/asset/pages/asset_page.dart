@@ -315,6 +315,7 @@ class _WalletSection extends ConsumerWidget {
     if (wallets.isEmpty) {
       return AppEmptyState(
         emoji: '👛',
+        imagePath: 'assets/images/mascot-wallet.png',
         title: 'Belum ada dompet',
         description: 'Tambahkan dompet atau rekening untuk mulai mencatat',
       );
@@ -500,6 +501,7 @@ class _InvestmentSection extends ConsumerWidget {
     if (investments.isEmpty) {
       return AppEmptyState(
         emoji: '📈',
+        imagePath: 'assets/images/mascot-investasi.png',
         title: 'Belum ada investasi',
         description: 'Catat aset investasimu di sini',
       );

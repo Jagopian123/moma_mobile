@@ -134,23 +134,28 @@ class SettingsPage extends ConsumerWidget {
           _SettingsGroup(
             items: [
               _SettingsItem(
-                icon: Icons.help_outline_rounded,
-                iconColor: AppColors.primary,
-                label: 'FAQ',
-                onTap: () => _showComingSoon(context),
+                icon: Icons.pie_chart_rounded,
+                iconColor: const Color(0xFF10B981),
+                label: 'Budget',
+                onTap: () => context.push('/budget'),
               ),
               _SettingsItem(
-                icon: Icons.emoji_events_rounded,
+                icon: Icons.flag_rounded,
+                iconColor: const Color(0xFF2563EB),
+                label: 'Rencana Finansial',
+                onTap: () => context.push('/financial-plan'),
+              ),
+              _SettingsItem(
+                icon: Icons.handshake_rounded,
                 iconColor: const Color(0xFFF59E0B),
-                label: 'Misi',
-                onTap: () => _showComingSoon(context),
+                label: 'Hutang & Piutang',
+                onTap: () => context.push('/debt'),
               ),
               _SettingsItem(
-                icon: Icons.workspace_premium_rounded,
-                iconColor: const Color(0xFF8B5CF6),
-                label: 'Premium',
-                badge: user?.isPremium == true ? 'Aktif' : null,
-                onTap: () => context.push('/premium'),
+                icon: Icons.insights_rounded,
+                iconColor: const Color(0xFF6366F1),
+                label: 'Insight AI',
+                onTap: () => context.push('/insights'),
               ),
               _SettingsItem(
                 icon: Icons.category_rounded,
@@ -163,6 +168,25 @@ class SettingsPage extends ConsumerWidget {
                 iconColor: const Color(0xFF8B5CF6),
                 label: 'Kelola Langganan',
                 onTap: () => context.push('/subscription'),
+              ),
+              _SettingsItem(
+                icon: Icons.workspace_premium_rounded,
+                iconColor: const Color(0xFF8B5CF6),
+                label: 'Premium',
+                badge: user?.isPremium == true ? 'Aktif' : null,
+                onTap: () => context.push('/premium'),
+              ),
+              _SettingsItem(
+                icon: Icons.help_outline_rounded,
+                iconColor: AppColors.primary,
+                label: 'FAQ',
+                onTap: () => _showComingSoon(context),
+              ),
+              _SettingsItem(
+                icon: Icons.emoji_events_rounded,
+                iconColor: const Color(0xFFF59E0B),
+                label: 'Misi',
+                onTap: () => _showComingSoon(context),
               ),
               _SettingsItem(
                 icon: Icons.cloud_upload_rounded,

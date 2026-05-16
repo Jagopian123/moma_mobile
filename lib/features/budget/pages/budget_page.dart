@@ -46,6 +46,7 @@ class BudgetPage extends ConsumerWidget {
       body: budgets.isEmpty
           ? AppEmptyState(
               emoji: '💰',
+              imagePath: 'assets/images/mascot-budget.png',
               title: 'Belum ada budget',
               description: 'Tambahkan budget untuk mengontrol pengeluaranmu',
               actionLabel: 'Tambah Budget',

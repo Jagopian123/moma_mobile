@@ -221,6 +221,7 @@ class AppSectionHeader extends StatelessWidget {
 
 class AppEmptyState extends StatelessWidget {
   final String emoji;
+  final String? imagePath;
   final String title;
   final String description;
   final String? actionLabel;
@@ -229,6 +230,7 @@ class AppEmptyState extends StatelessWidget {
   const AppEmptyState({
     super.key,
     required this.emoji,
+    this.imagePath,
     required this.title,
     required this.description,
     this.actionLabel,
@@ -243,7 +245,17 @@ class AppEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 56)),
+            if (imagePath != null)
+              Image.asset(
+                imagePath!,
+                width: 120,
+                height: 120,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) =>
+                    Text(emoji, style: const TextStyle(fontSize: 56)),
+              )
+            else
+              Text(emoji, style: const TextStyle(fontSize: 56)),
             const SizedBox(height: AppSpacing.md),
             Text(
               title,

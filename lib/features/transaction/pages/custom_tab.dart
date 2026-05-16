@@ -140,6 +140,7 @@ class _CustomTabState extends ConsumerState<CustomTab> {
         if (transactions.isEmpty)
           AppEmptyState(
             emoji: '🔍',
+            imagePath: 'assets/images/mascot-transaksi.png',
             title: 'Tidak ada transaksi',
             description: 'Tidak ada transaksi pada rentang tanggal ini',
           )

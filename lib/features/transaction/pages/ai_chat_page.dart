@@ -223,22 +223,11 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         ),
         title: Row(
           children: [
-            Container(
+            Image.asset(
+              'assets/images/mascot-profile.png',
               width: 36,
               height: 36,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6366F1), Color(0xFF2563EB)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-              ),
-              child: const Icon(
-                Icons.auto_awesome_rounded,
-                color: Colors.white,
-                size: 18,
-              ),
+              fit: BoxFit.contain,
             ),
             const SizedBox(width: AppSpacing.sm),
             Column(
@@ -361,22 +350,11 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: AppSpacing.xl),
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF6366F1), Color(0xFF2563EB)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(AppRadius.xl),
-            ),
-            child: const Icon(
-              Icons.auto_awesome_rounded,
-              color: Colors.white,
-              size: 40,
-            ),
+          Image.asset(
+            'assets/images/mascot-profile.png',
+            width: 100,
+            height: 100,
+            fit: BoxFit.contain,
           ),
           const SizedBox(height: AppSpacing.lg),
           const Text(
@@ -768,17 +746,11 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   }
 
   Widget _aiAvatar() {
-    return Container(
+    return Image.asset(
+      'assets/images/mascot-profile.png',
       width: 28,
       height: 28,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6366F1), Color(0xFF2563EB)],
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child:
-          const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
+      fit: BoxFit.contain,
     );
   }
 }
@@ -967,17 +939,11 @@ class _AiBubble extends StatelessWidget {
   }
 
   Widget _aiAvatar() {
-    return Container(
+    return Image.asset(
+      'assets/images/mascot-profile.png',
       width: 28,
       height: 28,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6366F1), Color(0xFF2563EB)],
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child:
-          const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
+      fit: BoxFit.contain,
     );
   }
 }
@@ -1079,17 +1045,11 @@ class _CreditLimitBubble extends StatelessWidget {
   }
 
   Widget _aiAvatarWidget() {
-    return Container(
+    return Image.asset(
+      'assets/images/mascot-profile.png',
       width: 28,
       height: 28,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6366F1), Color(0xFF2563EB)],
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child:
-          const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
+      fit: BoxFit.contain,
     );
   }
 }
@@ -1873,17 +1833,11 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
   }
 
   Widget _cardAvatar() {
-    return Container(
+    return Image.asset(
+      'assets/images/mascot-profile.png',
       width: 28,
       height: 28,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6366F1), Color(0xFF2563EB)],
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child:
-          const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 14),
+      fit: BoxFit.contain,
     );
   }
 }

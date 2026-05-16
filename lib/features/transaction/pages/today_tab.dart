@@ -38,6 +38,7 @@ class TodayTab extends ConsumerWidget {
         if (transactions.isEmpty)
           AppEmptyState(
             emoji: '📭',
+            imagePath: 'assets/images/mascot-transaksi.png',
             title: 'Belum ada transaksi',
             description: 'Tap tombol + untuk mencatat transaksi hari ini',
           )

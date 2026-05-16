@@ -76,6 +76,7 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage>
             subs: active,
             notifier: notifier,
             emptyEmoji: '📋',
+            emptyImagePath: 'assets/images/mascot-langganan.png',
             emptyTitle: 'Belum ada langganan aktif',
             emptyDesc: 'Tambahkan layanan berlangganan yang kamu pakai',
             onAdd: _showForm,
@@ -87,6 +88,7 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage>
             subs: all,
             notifier: notifier,
             emptyEmoji: '📦',
+            emptyImagePath: 'assets/images/mascot-langganan.png',
             emptyTitle: 'Belum ada langganan',
             emptyDesc: 'Mulai tambahkan layanan berlanggananmu',
             onAdd: _showForm,
@@ -166,6 +168,7 @@ class _SubscriptionTab extends ConsumerWidget {
   final String emptyEmoji;
   final String emptyTitle;
   final String emptyDesc;
+  final String? emptyImagePath;
   final VoidCallback onAdd;
   final ValueChanged<SubscriptionModel> onEdit;
   final bool showSummary;
@@ -176,6 +179,7 @@ class _SubscriptionTab extends ConsumerWidget {
     required this.emptyEmoji,
     required this.emptyTitle,
     required this.emptyDesc,
+    this.emptyImagePath,
     required this.onAdd,
     required this.onEdit,
     required this.showSummary,
@@ -190,7 +194,17 @@ class _SubscriptionTab extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(emptyEmoji, style: const TextStyle(fontSize: 56)),
+              if (emptyImagePath != null)
+                Image.asset(
+                  emptyImagePath!,
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) =>
+                      Text(emptyEmoji, style: const TextStyle(fontSize: 56)),
+                )
+              else
+                Text(emptyEmoji, style: const TextStyle(fontSize: 56)),
               const SizedBox(height: AppSpacing.md),
               Text(emptyTitle,
                   style: AppTextStyles.h4, textAlign: TextAlign.center),
