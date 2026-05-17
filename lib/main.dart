@@ -8,7 +8,9 @@ import 'core/hive/hive_service.dart';
 import 'core/hive/category_seeder.dart';
 import 'core/router/app_router.dart';
 import 'core/services/api_service.dart';
+import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
+import 'features/notifications/providers/notification_provider.dart';
 import 'features/security/providers/security_provider.dart';
 import 'features/security/widgets/lock_screen.dart';
 
@@ -48,6 +50,14 @@ void main() async {
   // Init API service (Dio + interceptor)
   ApiService().init();
 
+  // Init notification service dan jadwalkan reminders
+  await NotificationService.init();
+  await Future.wait([
+    NotificationService.scheduleDailyReminder(),
+    NotificationService.scheduleSubscriptionReminders(),
+    NotificationService.scheduleDebtReminders(),
+  ]);
+
   runApp(
     const ProviderScope(
       child: MomaApp(),
@@ -67,6 +77,9 @@ class _MomaAppState extends ConsumerState<MomaApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(notificationProvider.notifier).generateAll();
+    });
   }
 
   @override

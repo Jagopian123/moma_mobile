@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/hive/hive_service.dart';
 import '../../../core/hive/models/subscription_model.dart';
+import '../../../core/services/notification_service.dart';
 
 // ── Preset layanan populer ─────────────────────────────────────────────────────
 
@@ -105,6 +106,7 @@ class SubscriptionNotifier extends StateNotifier<List<SubscriptionModel>> {
     );
     await HiveService.subscriptions.put(model.id, model);
     _load();
+    NotificationService.scheduleSubscriptionReminders();
   }
 
   Future<void> update({
@@ -139,6 +141,7 @@ class SubscriptionNotifier extends StateNotifier<List<SubscriptionModel>> {
     );
     await HiveService.subscriptions.put(id, updated);
     _load();
+    NotificationService.scheduleSubscriptionReminders();
   }
 
   Future<void> updateStatus(String id, String status) async {
@@ -147,6 +150,7 @@ class SubscriptionNotifier extends StateNotifier<List<SubscriptionModel>> {
     existing.status = status;
     await existing.save();
     _load();
+    NotificationService.scheduleSubscriptionReminders();
   }
 
   Future<void> updateWallet(String id, String? walletId, String? walletName) async {
@@ -164,11 +168,13 @@ class SubscriptionNotifier extends StateNotifier<List<SubscriptionModel>> {
     existing.nextBillingDate = _advance(existing.nextBillingDate, existing.cycle);
     await existing.save();
     _load();
+    NotificationService.scheduleSubscriptionReminders();
   }
 
   Future<void> delete(String id) async {
     await HiveService.subscriptions.delete(id);
     _load();
+    NotificationService.scheduleSubscriptionReminders();
   }
 
   // ── Computed ──────────────────────────────────────────────────────────────────

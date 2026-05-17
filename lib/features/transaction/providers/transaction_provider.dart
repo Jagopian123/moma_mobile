@@ -3,8 +3,10 @@ import 'package:uuid/uuid.dart';
 import '../../../core/hive/hive_service.dart';
 import '../../../core/hive/models/transaction_model.dart';
 import '../../../core/hive/models/wallet_model.dart';
+import '../../../core/services/notification_service.dart';
 import '../../asset/providers/wallet_provider.dart';
 import '../../budget/providers/budget_provider.dart';
+import '../../notifications/providers/notification_provider.dart';
 
 final transactionProvider =
     StateNotifierProvider<TransactionNotifier, List<TransactionModel>>((ref) {
@@ -59,9 +61,38 @@ class TransactionNotifier extends StateNotifier<List<TransactionModel>> {
       createdAt: DateTime.now(),
     );
 
+    // Tangkap spent SEBELUM transaksi baru masuk (untuk threshold check)
+    final budgetNotifier = _ref.read(budgetProvider.notifier);
+    final budgets = _ref.read(budgetProvider);
+    final spentBefore = budgets.map((b) => budgetNotifier.getSpent(b)).toList();
+
     await HiveService.transactions.put(tx.id, tx);
     _load();
-    _ref.read(budgetProvider.notifier).refresh(); // ← tambah ini
+    budgetNotifier.refresh();
+
+    // Cek budget alert & update in-app notif setelah state terupdate
+    final notifNotifier = _ref.read(notificationProvider.notifier);
+    for (int i = 0; i < budgets.length; i++) {
+      final spentAfter = budgetNotifier.getSpent(budgets[i]);
+      final pctAfter = budgets[i].limitAmount > 0
+          ? spentAfter / budgets[i].limitAmount
+          : 0.0;
+
+      await NotificationService.checkBudgetAlert(
+        budget: budgets[i],
+        spentBefore: spentBefore[i],
+        spentAfter: spentAfter,
+        index: i,
+      );
+
+      if (pctAfter >= 0.8) {
+        await notifNotifier.updateBudgetNotif(
+          budgetId: budgets[i].id,
+          categoryName: budgets[i].categoryName,
+          percentage: pctAfter,
+        );
+      }
+    }
   }
 
   // ── Tambah Pemasukan ──────────────────────────────────────────

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/hive/hive_service.dart';
 import '../../../core/hive/models/debt_model.dart';
+import '../../../core/services/notification_service.dart';
 import '../../asset/providers/wallet_provider.dart';
 
 final debtProvider =
@@ -61,6 +62,7 @@ class DebtNotifier extends StateNotifier<List<DebtModel>> {
     );
     await HiveService.debts.put(debt.id, debt);
     _load();
+    NotificationService.scheduleDebtReminders();
   }
 
   // ── Tambah Hutang (saya berhutang ke orang) ───────────────────
@@ -91,6 +93,7 @@ class DebtNotifier extends StateNotifier<List<DebtModel>> {
     );
     await HiveService.debts.put(debt.id, debt);
     _load();
+    NotificationService.scheduleDebtReminders();
   }
 
   // ── Bayar hutang / Terima pembayaran piutang ──────────────────
@@ -151,11 +154,13 @@ class DebtNotifier extends StateNotifier<List<DebtModel>> {
     );
     await HiveService.debts.put(debtId, updated);
     _load();
+    NotificationService.scheduleDebtReminders();
   }
 
   Future<void> delete(String id) async {
     await HiveService.debts.delete(id);
     _load();
+    NotificationService.scheduleDebtReminders();
   }
 
   // ── Getters ───────────────────────────────────────────────────

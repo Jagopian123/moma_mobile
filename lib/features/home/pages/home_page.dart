@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -18,6 +17,7 @@ import '../../debt/providers/debt_provider.dart';
 import '../../transaction/widgets/transaction_card.dart';
 import '../providers/home_provider.dart';
 import '../../insights/providers/analytics_provider.dart';
+import '../../notifications/providers/notification_provider.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -82,6 +82,9 @@ class HomePage extends ConsumerWidget {
                 ],
               ),
               actions: [
+                // Bell icon
+                const _NotifBell(),
+                const SizedBox(width: 4),
                 // Avatar
                 GestureDetector(
                   onTap: () => context.push('/profile'),
@@ -89,7 +92,7 @@ class HomePage extends ConsumerWidget {
                     padding: const EdgeInsets.only(right: AppSpacing.md),
                     child: CircleAvatar(
                       radius: 18,
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                       child: Text(
                         user?.name.isNotEmpty == true
                             ? user!.name[0].toUpperCase()
@@ -855,6 +858,58 @@ class _RecentTransactions extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+// ── Notification Bell ─────────────────────────────────────────────────────────
+
+class _NotifBell extends ConsumerWidget {
+  const _NotifBell();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifs = ref.watch(notificationProvider);
+    final unread = notifs.where((n) => !n.isRead).length;
+
+    return GestureDetector(
+      onTap: () => context.push('/notifications'),
+      child: Padding(
+        padding: const EdgeInsets.only(right: 4),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const Icon(
+              Icons.notifications_outlined,
+              color: AppColors.textPrimary,
+              size: 26,
+            ),
+            if (unread > 0)
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(
+                    color: AppColors.expense,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Text(
+                    unread > 9 ? '9+' : '$unread',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

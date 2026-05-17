@@ -7,6 +7,7 @@ import 'models/financial_plan_model.dart';
 import 'models/debt_model.dart';
 import 'models/investment_model.dart';
 import 'models/subscription_model.dart';
+import 'models/in_app_notification_model.dart';
 
 class HiveService {
   static const String walletBox = 'wallets';
@@ -17,6 +18,7 @@ class HiveService {
   static const String debtBox = 'debts';
   static const String investmentBox = 'investments';
   static const String subscriptionBox = 'subscriptions';
+  static const String notificationBox = 'in_app_notifications';
   static const String userBox = 'user';
 
   static Future<void> init() async {
@@ -33,6 +35,7 @@ class HiveService {
     Hive.registerAdapter(DebtPaymentModelAdapter());
     Hive.registerAdapter(InvestmentModelAdapter());
     Hive.registerAdapter(SubscriptionModelAdapter());
+    Hive.registerAdapter(InAppNotificationModelAdapter());
 
     // Buka semua box sekaligus
     await Future.wait([
@@ -44,6 +47,7 @@ class HiveService {
       Hive.openBox<DebtModel>(debtBox),
       Hive.openBox<InvestmentModel>(investmentBox),
       Hive.openBox<SubscriptionModel>(subscriptionBox),
+      Hive.openBox<InAppNotificationModel>(notificationBox),
       Hive.openBox(userBox),
     ]);
   }
@@ -62,6 +66,8 @@ class HiveService {
       Hive.box<InvestmentModel>(investmentBox);
   static Box<SubscriptionModel> get subscriptions =>
       Hive.box<SubscriptionModel>(subscriptionBox);
+  static Box<InAppNotificationModel> get notifications =>
+      Hive.box<InAppNotificationModel>(notificationBox);
   static Box get user => Hive.box(userBox);
 
   // Hapus semua data finansial user (wallets, transactions, budgets, dll)
