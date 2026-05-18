@@ -298,7 +298,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                               Text(
                                 chatState.isLimitReached
                                     ? 'Habis'
-                                    : '${chatState.creditsRemaining}/${AppConstants.aiFreeDailyLimit}',
+                                    : '${chatState.creditsRemaining}/${AppConstants.aiFreeMonthlyLimit}',
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontSize: 10,
@@ -990,7 +990,7 @@ class _CreditLimitBubble extends StatelessWidget {
                       Icon(Icons.bolt_rounded, color: Colors.amber, size: 16),
                       SizedBox(width: 4),
                       Text(
-                        'Kredit AI harian habis',
+                        'Kredit AI bulan ini habis 😔',
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 13,
@@ -1002,8 +1002,8 @@ class _CreditLimitBubble extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Kamu sudah menggunakan ${AppConstants.aiFreeDailyLimit}x AI hari ini. '
-                    'Upgrade ke Premium untuk catat AI tanpa batas setiap hari.',
+                    'Kamu sudah menggunakan ${AppConstants.aiFreeMonthlyLimit}x kuota AI bulan ini. '
+                    'Upgrade ke Premium untuk catat AI tanpa batas!',
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 12,

@@ -36,6 +36,6 @@ class AppConstants {
   static const String iapYearly = 'moma_premium_yearly';
   static const Set<String> iapProductIds = {iapMonthly, iapYearly};
 
-  // Free tier AI credit limit per day
-  static const int aiFreeDailyLimit = 5;
+  // Free tier AI credit limit per month
+  static const int aiFreeMonthlyLimit = 30;
 }

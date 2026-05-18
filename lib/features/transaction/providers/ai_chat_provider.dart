@@ -93,7 +93,7 @@ class AiChatState {
   const AiChatState({
     this.messages = const [],
     this.isLoading = false,
-    this.creditsRemaining = AppConstants.aiFreeDailyLimit,
+    this.creditsRemaining = AppConstants.aiFreeMonthlyLimit,
     this.savedAmounts = const {},
     this.dismissedCards = const {},
   });
@@ -129,7 +129,7 @@ class AiChatState {
             .map((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
             .toList(),
         creditsRemaining:
-            j['creditsRemaining'] as int? ?? AppConstants.aiFreeDailyLimit,
+            j['creditsRemaining'] as int? ?? AppConstants.aiFreeMonthlyLimit,
         savedAmounts: (j['savedAmounts'] as Map<String, dynamic>? ?? {})
             .map((k, v) => MapEntry(k, (v as num).toDouble())),
         dismissedCards:
@@ -317,8 +317,8 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
       _handleResults(
         response.data['data'],
         labelOverride: (count) => count == 1
-            ? 'Saya membaca 1 transaksi dari struk. Cek detail:'
-            : 'Saya membaca $count transaksi dari struk. Cek detail:',
+            ? '🧾 Struk berhasil dibaca! Saya menemukan 1 transaksi. Cek detail:'
+            : '🧾 Struk berhasil dibaca! Saya menemukan $count transaksi. Cek detail:',
       );
     } on DioException catch (e) {
       if (e.response?.statusCode == 429) {
@@ -486,7 +486,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
         ? labelOverride(results.length)
         : (results.length == 1
             ? _typeLabel(results.first.type)
-            : 'Saya mendeteksi ${results.length} transaksi. Cek detail di bawah:');
+            : '✨ Oke! Saya menemukan ${results.length} transaksi. Cek detail di bawah ya:');
 
     final aiMsg = ChatMessage(
       id: '${DateTime.now().millisecondsSinceEpoch}_ai',
@@ -507,7 +507,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
     _updateCredits(0);
     final msg = ChatMessage(
       id: '${DateTime.now().millisecondsSinceEpoch}_limit',
-      text: 'Kredit AI harian kamu sudah habis (${AppConstants.aiFreeDailyLimit}x/hari). '
+      text: '😔 Kredit AI bulan ini sudah habis (${AppConstants.aiFreeMonthlyLimit}x/bulan). '
           'Upgrade ke Premium untuk catat AI tanpa batas!',
       isUser: false,
       isError: false,
@@ -528,9 +528,9 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.receiveTimeout:
       case DioExceptionType.sendTimeout:
-        msg = 'Koneksi timeout. Pastikan backend berjalan dan coba lagi.';
+        msg = '⏱️ Koneksi timeout. Periksa koneksi internet kamu dan coba lagi.';
       case DioExceptionType.connectionError:
-        msg = 'Tidak dapat terhubung ke server. Pastikan backend berjalan.';
+        msg = '📡 Tidak dapat terhubung ke server. Periksa koneksi internet kamu.';
       default:
         final serverMsg = e.response?.data is Map
             ? e.response?.data['message'] as String?
@@ -557,9 +557,9 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
 
   String _typeLabel(String type) {
     return switch (type) {
-      'income'   => 'Saya mendeteksi Pemasukan. Cek detail di bawah:',
-      'transfer' => 'Saya mendeteksi Transfer. Cek detail di bawah:',
-      _          => 'Saya mendeteksi Pengeluaran. Cek detail di bawah:',
+      'income'   => '💰 Oke! Saya mendeteksi Pemasukan. Cek detail di bawah ya:',
+      'transfer' => '🔄 Oke! Saya mendeteksi Transfer. Cek detail di bawah ya:',
+      _          => '🛍️ Oke! Saya mendeteksi Pengeluaran. Cek detail di bawah ya:',
     };
   }
 }

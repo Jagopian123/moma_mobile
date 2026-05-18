@@ -128,7 +128,7 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
           Text(
             isPremium
                 ? 'Nikmati semua fitur tanpa batas'
-                : 'Catat transaksi dengan AI tanpa batas harian',
+                : 'Catat transaksi dengan AI tanpa batas bulanan',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Poppins',
@@ -146,7 +146,7 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
   Widget _buildFeatureList() {
     final features = [
       (Icons.auto_awesome_rounded, 'AI Catat Unlimited',
-          'Tanpa batas harian — free hanya 5x/hari'),
+          'Tanpa batas bulanan — free hanya 30x/bulan'),
       (Icons.mic_rounded, 'Catat Suara & Scan Struk',
           'Gunakan sesukamu setiap hari'),
       (Icons.flash_on_rounded, 'Prioritas Kecepatan AI',
