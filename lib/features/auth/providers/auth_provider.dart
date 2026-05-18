@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:dio/dio.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/hive/hive_service.dart';
+import '../../../core/hive/models/wallet_model.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/backup_service.dart';
 import '../models/user_model.dart';
@@ -177,6 +179,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (_) {
       // Gagal restore tidak masalah — user mulai dengan data kosong
     }
+
+    if (HiveService.wallets.isEmpty) {
+      await _seedDefaultWallet();
+      _ref.invalidate(walletProvider);
+    }
+  }
+
+  Future<void> _seedDefaultWallet() async {
+    final now = DateTime.now();
+    final wallet = WalletModel(
+      id: const Uuid().v4(),
+      name: 'Cash',
+      type: 'cash',
+      balance: 1000000,
+      icon: '💵',
+      color: '#3B82F6',
+      createdAt: now,
+      updatedAt: now,
+    );
+    await HiveService.wallets.put(wallet.id, wallet);
   }
 
   // Flush semua data provider agar mereka re-load dari Hive yang sudah bersih.

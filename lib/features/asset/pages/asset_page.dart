@@ -11,18 +11,30 @@ import '../providers/wallet_provider.dart';
 import '../providers/investment_provider.dart';
 import '../widgets/wallet_form_sheet.dart';
 import '../widgets/investment_form_sheet.dart';
+import '../../home/providers/home_provider.dart';
+
+// ── Amount mask helpers ───────────────────────────────────────────────────────
+
+String _maskAmount(bool isVisible, double amount) =>
+    isVisible ? CurrencyFormatter.format(amount) : 'Rp •••••••';
+
+String _maskCompact(bool isVisible, double amount) =>
+    isVisible ? CurrencyFormatter.formatCompact(amount) : '•••••';
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class AssetPage extends ConsumerWidget {
   const AssetPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final wallets = ref.watch(walletProvider);
+    final wallets     = ref.watch(walletProvider);
     final investments = ref.watch(investmentProvider);
+    final isVisible   = ref.watch(balanceVisibleProvider);
 
-    final totalWallet = ref.read(walletProvider.notifier).totalBalance;
+    final totalWallet     = ref.read(walletProvider.notifier).totalBalance;
     final totalInvestment = ref.read(investmentProvider.notifier).totalValue;
-    final totalAsset = totalWallet + totalInvestment;
+    final totalAsset      = totalWallet + totalInvestment;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -52,6 +64,9 @@ class AssetPage extends ConsumerWidget {
                         .where((w) => w.type != 'cash')
                         .fold(0.0, (s, w) => s + w.balance),
                     totalInvestment: totalInvestment,
+                    isVisible: isVisible,
+                    onToggle: () =>
+                        ref.read(balanceVisibleProvider.notifier).toggle(),
                   ),
                   const SizedBox(height: AppSpacing.lg),
 
@@ -61,7 +76,7 @@ class AssetPage extends ConsumerWidget {
                     onSeeAll: null,
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  _WalletSection(wallets: wallets),
+                  _WalletSection(wallets: wallets, isVisible: isVisible),
                   const SizedBox(height: AppSpacing.md),
 
                   // Tombol tambah dompet
@@ -78,7 +93,8 @@ class AssetPage extends ConsumerWidget {
                     onSeeAll: null,
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  _InvestmentSection(investments: investments),
+                  _InvestmentSection(
+                      investments: investments, isVisible: isVisible),
                   const SizedBox(height: AppSpacing.md),
 
                   // Tombol tambah investasi
@@ -125,12 +141,16 @@ class _AssetOverviewCard extends StatelessWidget {
   final double totalCash;
   final double totalBank;
   final double totalInvestment;
+  final bool isVisible;
+  final VoidCallback onToggle;
 
   const _AssetOverviewCard({
     required this.totalAsset,
     required this.totalCash,
     required this.totalBank,
     required this.totalInvestment,
+    required this.isVisible,
+    required this.onToggle,
   });
 
   @override
@@ -139,27 +159,49 @@ class _AssetOverviewCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Total Aset',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 13,
-              color: Colors.white.withOpacity(0.8),
-            ),
+          // Header row: label + eye toggle
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total Aset',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
+              ),
+              GestureDetector(
+                onTap: onToggle,
+                child: Icon(
+                  isVisible
+                      ? Icons.visibility_rounded
+                      : Icons.visibility_off_rounded,
+                  color: Colors.white.withValues(alpha: 0.8),
+                  size: 20,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 6),
-          Text(
-            CurrencyFormatter.format(totalAsset),
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+
+          // Total amount with animated switch
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              _maskAmount(isVisible, totalAsset),
+              key: ValueKey(isVisible),
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 26,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
 
-          // Distribusi bar
+          // Distribusi bar (proportional, no amounts shown)
           _DistributionBar(
             totalCash: totalCash,
             totalBank: totalBank,
@@ -175,17 +217,17 @@ class _AssetOverviewCard extends StatelessWidget {
               _LegendItem(
                 color: Colors.white,
                 label: 'Tunai',
-                value: CurrencyFormatter.formatCompact(totalCash),
+                value: _maskCompact(isVisible, totalCash),
               ),
               _LegendItem(
                 color: Colors.white.withOpacity(0.7),
                 label: 'Bank/E-Wallet',
-                value: CurrencyFormatter.formatCompact(totalBank),
+                value: _maskCompact(isVisible, totalBank),
               ),
               _LegendItem(
                 color: const Color(0xFF93C5FD),
                 label: 'Investasi',
-                value: CurrencyFormatter.formatCompact(totalInvestment),
+                value: _maskCompact(isVisible, totalInvestment),
               ),
             ],
           ),
@@ -222,7 +264,7 @@ class _DistributionBar extends StatelessWidget {
 
     final cashPct = totalCash / total;
     final bankPct = totalBank / total;
-    final invPct = totalInvestment / total;
+    final invPct  = totalInvestment / total;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.full),
@@ -307,8 +349,9 @@ class _LegendItem extends StatelessWidget {
 
 class _WalletSection extends ConsumerWidget {
   final List<WalletModel> wallets;
+  final bool isVisible;
 
-  const _WalletSection({required this.wallets});
+  const _WalletSection({required this.wallets, required this.isVisible});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -327,6 +370,7 @@ class _WalletSection extends ConsumerWidget {
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: _WalletCard(
                   wallet: wallet,
+                  isVisible: isVisible,
                   onEdit: () => _showEdit(context, ref, wallet),
                   onDelete: () => _confirmDelete(context, ref, wallet),
                 ),
@@ -361,11 +405,13 @@ class _WalletSection extends ConsumerWidget {
 
 class _WalletCard extends StatelessWidget {
   final WalletModel wallet;
+  final bool isVisible;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _WalletCard({
     required this.wallet,
+    required this.isVisible,
     required this.onEdit,
     required this.onDelete,
   });
@@ -427,7 +473,7 @@ class _WalletCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                CurrencyFormatter.format(wallet.balance),
+                _maskAmount(isVisible, wallet.balance),
                 style: AppTextStyles.bodyMedium,
               ),
               if (wallet.accountNumber != null &&
@@ -493,8 +539,10 @@ class _WalletCard extends StatelessWidget {
 
 class _InvestmentSection extends ConsumerWidget {
   final List<InvestmentModel> investments;
+  final bool isVisible;
 
-  const _InvestmentSection({required this.investments});
+  const _InvestmentSection(
+      {required this.investments, required this.isVisible});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -513,6 +561,7 @@ class _InvestmentSection extends ConsumerWidget {
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                 child: _InvestmentCard(
                   investment: inv,
+                  isVisible: isVisible,
                   onEdit: () => _showEdit(context, ref, inv),
                   onDelete: () => _confirmDelete(context, ref, inv),
                 ),
@@ -546,11 +595,13 @@ class _InvestmentSection extends ConsumerWidget {
 
 class _InvestmentCard extends StatelessWidget {
   final InvestmentModel investment;
+  final bool isVisible;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _InvestmentCard({
     required this.investment,
+    required this.isVisible,
     required this.onEdit,
     required this.onDelete,
   });
@@ -597,7 +648,7 @@ class _InvestmentCard extends StatelessWidget {
 
           // Nilai
           Text(
-            CurrencyFormatter.format(investment.currentValue),
+            _maskAmount(isVisible, investment.currentValue),
             style: AppTextStyles.bodyMedium,
           ),
           const SizedBox(width: AppSpacing.sm),
