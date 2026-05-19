@@ -166,6 +166,9 @@ class AppTimelineProgressBar extends StatelessWidget {
     final budget = (budgetPercentage.isNaN || budgetPercentage.isInfinite)
         ? 0.0
         : budgetPercentage.clamp(0.0, 1.0);
+    final budgetRaw = (budgetPercentage.isNaN || budgetPercentage.isInfinite)
+        ? 0.0
+        : budgetPercentage.clamp(0.0, double.infinity);
     final time = (timePercentage.isNaN || timePercentage.isInfinite)
         ? 0.0
         : timePercentage.clamp(0.0, 1.0);
@@ -179,85 +182,123 @@ class AppTimelineProgressBar extends StatelessWidget {
       barColor = AppColors.safe; // hemat
     }
 
+    final isNearEnd = budget >= 0.88;
+    final pctColor  = isNearEnd ? Colors.white : barColor;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Stack(
-          children: [
-            // Background bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.full),
-              child: Container(
-                height: 10,
-                width: double.infinity,
-                color: AppColors.border,
+        // ── Bar dengan label % di dalamnya ─────────────────────
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final totalWidth = constraints.maxWidth;
+            final barWidth   = totalWidth * budget;
+            final timeX      = totalWidth * time;
+
+            return SizedBox(
+              height: 10,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Background
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                    child: Container(
+                      height: 10,
+                      width: totalWidth,
+                      color: AppColors.border,
+                    ),
+                  ),
+                  // Budget bar
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeInOut,
+                      height: 10,
+                      width: barWidth,
+                      color: barColor,
+                    ),
+                  ),
+                  // Today marker
+                  Positioned(
+                    left: timeX - 1,
+                    top: 0,
+                    child: Container(
+                      width: 2,
+                      height: 10,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  // Percentage label — centered on bar, overflow via Clip.none
+                  if (budget > 0)
+                    Positioned(
+                      top: -2,
+                      left: isNearEnd
+                          ? (barWidth - 34).clamp(0.0, totalWidth)
+                          : barWidth + 4,
+                      child: Text(
+                        '${(budgetRaw * 100).toStringAsFixed(0)}%',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: pctColor,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ),
-            // Budget bar
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.full),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeInOut,
-                    height: 10,
-                    width: constraints.maxWidth * budget,
-                    color: barColor,
-                  ),
-                );
-              },
-            ),
-            // Today marker — ganti Positioned dengan LayoutBuilder + Transform
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return Transform.translate(
-                  offset: Offset((constraints.maxWidth * time) - 1, 0),
-                  child: Container(
-                    width: 2,
-                    height: 10,
-                    color: AppColors.textPrimary,
-                  ),
-                );
-              },
-            ),
-          ],
+            );
+          },
         ),
+
+        // ── Label bawah: 1 — Hari ini — 31 ────────────────────
         const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '1',
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 10,
-                color: AppColors.textHint,
+        SizedBox(
+          height: 14,
+          child: Stack(
+            children: [
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '1',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 10,
+                    color: AppColors.textHint,
+                  ),
+                ),
               ),
-            ),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return Text(
-                  '$todayLabel ${(time * 100).toStringAsFixed(0)}%',
+              const Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  '31',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 10,
+                    color: AppColors.textHint,
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment(
+                  (time * 2 - 1).clamp(-0.85, 0.85),
+                  0,
+                ),
+                child: Text(
+                  todayLabel,
                   style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
                     color: AppColors.textSecondary,
                   ),
-                );
-              },
-            ),
-            Text(
-              '31',
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 10,
-                color: AppColors.textHint,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );

@@ -147,6 +147,7 @@ class BudgetNotifier extends StateNotifier<List<BudgetModel>> {
   // Status budget
   BudgetStatus getStatus(BudgetModel budget) {
     final pct = getPercentage(budget);
+    if (pct >= 1.0) return BudgetStatus.overBudget;
     if (pct >= 0.9) return BudgetStatus.spendingFast;
     if (pct >= 0.7) return BudgetStatus.slightlyFast;
     return BudgetStatus.safe;
@@ -161,7 +162,7 @@ class BudgetNotifier extends StateNotifier<List<BudgetModel>> {
   // Overall percentage
   double get overallPercentage {
     if (totalLimit <= 0) return 0;
-    return (totalSpent / totalLimit).clamp(0.0, 1.0);
+    return totalSpent / totalLimit;
   }
 
   // Persentase waktu bulan berjalan (0.0 - 1.0)
@@ -186,6 +187,6 @@ class BudgetNotifier extends StateNotifier<List<BudgetModel>> {
   }
 }
 
-enum BudgetStatus { spendingFast, slightlyFast, safe }
+enum BudgetStatus { overBudget, spendingFast, slightlyFast, safe }
 
 enum BudgetHealth { aman, waspada, boros }
