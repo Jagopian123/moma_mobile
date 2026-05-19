@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -140,6 +141,7 @@ class HomePage extends ConsumerWidget {
                     title: 'Budget',
                     subtitle: 'Lacak batas pengeluaran kamu',
                     onSeeAll: () => context.push('/budget'),
+                    seeAllLabel: 'Lihat Detail',
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   budgets.isEmpty
@@ -215,50 +217,76 @@ class HomePage extends ConsumerWidget {
 
 // ── Home Insight Section ──────────────────────────────────────────────────────
 
-class _HomeInsightSection extends ConsumerWidget {
+class _HomeInsightSection extends ConsumerStatefulWidget {
   final VoidCallback onTap;
   const _HomeInsightSection({required this.onTap});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_HomeInsightSection> createState() =>
+      _HomeInsightSectionState();
+}
+
+class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
+  late final PageController _pageController;
+  int _currentPage = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      final insights = ref.read(homeInsightsProvider);
+      if (insights.length > 1 && _pageController.hasClients) {
+        final next = (_currentPage + 1) % insights.length;
+        _pageController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final insights = ref.watch(homeInsightsProvider);
     if (insights.isEmpty) return const SizedBox.shrink();
 
-    final insight = insights.first;
-
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
         decoration: BoxDecoration(
           color: const Color(0xFFEFF6FF),
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
+          border: Border.all(
+              color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
           children: [
-            // Content — right padding leaves room for mascot
+            // Content
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.md,
-                100,
-                AppSpacing.md,
-              ),
+                  AppSpacing.md, AppSpacing.md, 100, AppSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Label
-                  Row(
+                  // Label — static
+                  const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.auto_awesome_rounded,
-                        size: 12,
-                        color: Color(0xFF6366F1),
-                      ),
-                      const SizedBox(width: 4),
-                      const Text(
+                      Icon(Icons.auto_awesome_rounded,
+                          size: 12, color: Color(0xFF6366F1)),
+                      SizedBox(width: 4),
+                      Text(
                         'AI Insight',
                         style: TextStyle(
                           fontFamily: 'Poppins',
@@ -270,31 +298,75 @@ class _HomeInsightSection extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    insight.title,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+
+                  // PageView — swipeable, fixed height biar card tidak naik-turun
+                  SizedBox(
+                    height: 54,
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemCount: insights.length,
+                      onPageChanged: (i) =>
+                          setState(() => _currentPage = i),
+                      itemBuilder: (_, i) {
+                        final insight = insights[i];
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${insight.emoji}  ${insight.title}',
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              insight.body,
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 11,
+                                color: AppColors.textSecondary,
+                                height: 1.4,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    insight.body,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                      height: 1.4,
+
+                  // Dot indicators
+                  if (insights.length > 1) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: List.generate(
+                        insights.length.clamp(0, 8),
+                        (i) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: i == _currentPage ? 14 : 5,
+                          height: 5,
+                          margin: const EdgeInsets.only(right: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6366F1).withValues(
+                                alpha: i == _currentPage ? 1.0 : 0.25),
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.full),
+                          ),
+                        ),
+                      ),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  ],
                 ],
               ),
             ),
-            // Mascot — anchored bottom-right
+
+            // Mascot — static
             Positioned(
               right: 0,
               bottom: 0,
@@ -307,8 +379,8 @@ class _HomeInsightSection extends ConsumerWidget {
                   width: 90,
                   height: 90,
                   child: Center(
-                    child: Text('🤖', style: TextStyle(fontSize: 40)),
-                  ),
+                      child: Text('🤖',
+                          style: TextStyle(fontSize: 40))),
                 ),
               ),
             ),
@@ -317,7 +389,6 @@ class _HomeInsightSection extends ConsumerWidget {
       ),
     );
   }
-
 }
 
 class _EmptyPreviewCard extends StatelessWidget {
@@ -560,6 +631,7 @@ class _BudgetPreview extends StatelessWidget {
 
           Color color;
           switch (notifier.getStatus(budget)) {
+            case BudgetStatus.overBudget:
             case BudgetStatus.spendingFast:
               color = AppColors.danger;
               break;
@@ -575,8 +647,20 @@ class _BudgetPreview extends StatelessWidget {
               if (i > 0) const Divider(height: 20, color: AppColors.border),
               Row(
                 children: [
-                  Text(budget.categoryIcon,
-                      style: const TextStyle(fontSize: 20)),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Color(int.parse(
+                        budget.categoryColor.replaceFirst('#', '0xFF'),
+                      )).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Center(
+                      child: Text(budget.categoryIcon,
+                          style: const TextStyle(fontSize: 20)),
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -702,8 +786,8 @@ class _DebtPreview extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: const [
+                  const Row(
+                    children: [
                       Icon(Icons.arrow_downward_rounded,
                           size: 16, color: AppColors.income),
                       SizedBox(width: 4),
@@ -744,8 +828,8 @@ class _DebtPreview extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: const [
+                  const Row(
+                    children: [
                       Icon(Icons.arrow_upward_rounded,
                           size: 16, color: AppColors.expense),
                       SizedBox(width: 4),
@@ -796,7 +880,7 @@ class _RecentTransactions extends StatelessWidget {
     final recent = transactions.take(10).toList();
 
     if (recent.isEmpty) {
-      return AppEmptyState(
+      return const AppEmptyState(
         emoji: '📭',
         title: 'Belum ada transaksi',
         description: 'Tap tombol + untuk mulai mencatat',

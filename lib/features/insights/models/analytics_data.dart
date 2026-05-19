@@ -4,6 +4,22 @@ class AnalyticsPeriod {
   static const String year = 'year';
 }
 
+class BiggestTx {
+  final String emoji;
+  final String title;
+  final String categoryName;
+  final double amount;
+  final DateTime date;
+
+  const BiggestTx({
+    required this.emoji,
+    required this.title,
+    required this.categoryName,
+    required this.amount,
+    required this.date,
+  });
+}
+
 class AnalyticsSummary {
   final double totalIncome;
   final double totalExpense;
@@ -59,11 +75,13 @@ class FinancialHealthScore {
   final int score; // 0-100
   final String label; // Aman, Waspada, Boros
   final String description;
+  final List<String> tips;
 
   const FinancialHealthScore({
     required this.score,
     required this.label,
     required this.description,
+    this.tips = const [],
   });
 }
 
@@ -85,18 +103,24 @@ enum InsightType { positive, warning, neutral, danger }
 
 class AnalyticsData {
   final AnalyticsSummary summary;
+  final AnalyticsSummary? previousSummary;
   final List<CategoryExpense> categoryExpenses;
   final List<CashflowPoint> cashflowPoints;
   final List<WeeklySpending> weeklySpending;
   final FinancialHealthScore healthScore;
   final List<InsightItem> insights;
+  final BiggestTx? biggestTransaction;
+  final double dailyAverage;
 
   const AnalyticsData({
     required this.summary,
+    this.previousSummary,
     required this.categoryExpenses,
     required this.cashflowPoints,
     required this.weeklySpending,
     required this.healthScore,
     required this.insights,
+    this.biggestTransaction,
+    this.dailyAverage = 0,
   });
 }

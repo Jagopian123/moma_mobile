@@ -48,22 +48,71 @@ class CashflowChart extends StatelessWidget {
   }
 
   Widget _buildChart() {
-    final maxY = points.fold(0.0, (m, p) {
-          final top = p.income > p.expense ? p.income : p.expense;
-          return top > m ? top : m;
-        }) *
-        1.2;
+    // Peak values
+    double maxIncome = 0;
+    double maxExpense = 0;
+    for (final p in points) {
+      if (p.income > maxIncome) maxIncome = p.income;
+      if (p.expense > maxExpense) maxExpense = p.expense;
+    }
+
+    final maxY = (maxIncome > maxExpense ? maxIncome : maxExpense) * 1.3;
 
     final incomeSpots = <FlSpot>[];
     final expenseSpots = <FlSpot>[];
-
     for (var i = 0; i < points.length; i++) {
       incomeSpots.add(FlSpot(i.toDouble(), points[i].income));
       expenseSpots.add(FlSpot(i.toDouble(), points[i].expense));
     }
 
+    // Horizontal reference lines at peak values with labels
+    final hLines = <HorizontalLine>[];
+    if (maxIncome > 0) {
+      hLines.add(HorizontalLine(
+        y: maxIncome,
+        color: AppColors.income.withValues(alpha: 0.3),
+        strokeWidth: 1,
+        dashArray: [4, 4],
+        label: HorizontalLineLabel(
+          show: true,
+          alignment: Alignment.topRight,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: AppColors.income,
+          ),
+          labelResolver: (_) => _formatAmount(maxIncome),
+        ),
+      ));
+    }
+    if (maxExpense > 0) {
+      // If peaks are close in value, put expense label at bottom-right to avoid overlap
+      final closeToIncome =
+          maxIncome > 0 && (maxIncome - maxExpense).abs() / maxIncome < 0.1;
+      hLines.add(HorizontalLine(
+        y: maxExpense,
+        color: AppColors.expense.withValues(alpha: 0.3),
+        strokeWidth: 1,
+        dashArray: [4, 4],
+        label: HorizontalLineLabel(
+          show: true,
+          alignment:
+              closeToIncome ? Alignment.bottomRight : Alignment.topRight,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: AppColors.expense,
+          ),
+          labelResolver: (_) => _formatAmount(maxExpense),
+        ),
+      ));
+    }
+
     return LineChart(
       LineChartData(
+        extraLinesData: ExtraLinesData(horizontalLines: hLines),
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
@@ -109,7 +158,8 @@ class CashflowChart extends StatelessWidget {
         maxY: maxY <= 0 ? 1 : maxY,
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (_) => AppColors.textPrimary.withOpacity(0.85),
+            getTooltipColor: (_) =>
+                AppColors.textPrimary.withValues(alpha: 0.85),
             tooltipRoundedRadius: AppRadius.sm,
             getTooltipItems: (spots) {
               return spots.map((s) {
@@ -146,7 +196,7 @@ class CashflowChart extends StatelessWidget {
       dotData: const FlDotData(show: false),
       belowBarData: BarAreaData(
         show: true,
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
       ),
     );
   }

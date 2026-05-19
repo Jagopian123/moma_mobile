@@ -22,8 +22,25 @@ class HealthScoreCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Financial Health', style: AppTextStyles.h4),
+          Row(
+            children: [
+              Text('Kesehatan Keuangan', style: AppTextStyles.h4),
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: () => _showExplanation(context),
+                child: const Icon(
+                  Icons.help_outline_rounded,
+                  size: 16,
+                  color: AppColors.textHint,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.md),
+          if (score.tips.isNotEmpty) ...[
+            ...score.tips.map((tip) => _TipRow(tip: tip)),
+            const SizedBox(height: AppSpacing.md),
+          ],
           Row(
             children: [
               SizedBox(
@@ -89,12 +106,240 @@ class HealthScoreCard extends StatelessWidget {
     );
   }
 
+  void _showExplanation(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const _ScoreExplanationSheet(),
+    );
+  }
+
   Color _scoreColor(int score) {
     if (score >= 70) return AppColors.income;
     if (score >= 40) return AppColors.warning;
     return AppColors.expense;
   }
 }
+
+// ── Explanation Bottom Sheet ──────────────────────────────────────────────────
+
+class _ScoreExplanationSheet extends StatelessWidget {
+  const _ScoreExplanationSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(AppRadius.full),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text('Cara Hitung Skor', style: AppTextStyles.h3),
+          const SizedBox(height: 4),
+          const Text(
+            'Skor 0–100 dihitung dari 3 hal ini:',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 13,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const _Item(
+            emoji: '💰',
+            title: 'Tabungan  ·  50 poin',
+            desc:
+                'Makin besar persentase uang yang kamu sisihkan setiap bulan, makin tinggi skormu. Nabung 40% atau lebih = poin penuh.',
+          ),
+          const _Item(
+            emoji: '⚖️',
+            title: 'Keseimbangan  ·  30 poin',
+            desc:
+                'Dilihat dari seberapa jauh pengeluaranmu di bawah pemasukan. Pengeluaran lebih besar dari pemasukan = 0 poin.',
+          ),
+          const _Item(
+            emoji: '📊',
+            title: 'Disiplin Budget  ·  20 poin',
+            desc:
+                'Kalau kamu pakai fitur budget, skor ini naik sesuai berapa budget yang berhasil tidak dilewati.',
+          ),
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 14),
+          const Text(
+            'Arti skor:',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const _ScoreRange(
+              color: AppColors.income,
+              range: '70 – 100',
+              label: 'Aman — keuangan sehat'),
+          const _ScoreRange(
+              color: AppColors.warning,
+              range: '40 – 69',
+              label: 'Waspada — perlu lebih hemat'),
+          const _ScoreRange(
+              color: AppColors.expense,
+              range: '0 – 39',
+              label: 'Boros — pengeluaran terlalu tinggi'),
+        ],
+      ),
+    );
+  }
+}
+
+class _Item extends StatelessWidget {
+  final String emoji;
+  final String title;
+  final String desc;
+
+  const _Item({required this.emoji, required this.title, required this.desc});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  desc,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TipRow extends StatelessWidget {
+  final String tip;
+  const _TipRow({required this.tip});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFF),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('💡', style: TextStyle(fontSize: 14)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                tip,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScoreRange extends StatelessWidget {
+  final Color color;
+  final String range;
+  final String label;
+
+  const _ScoreRange(
+      {required this.color, required this.range, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            range,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Score Bar ─────────────────────────────────────────────────────────────────
 
 class _ScoreBar extends StatelessWidget {
   final int score;
@@ -152,6 +397,8 @@ class _Tag extends StatelessWidget {
     );
   }
 }
+
+// ── Arc Painter ───────────────────────────────────────────────────────────────
 
 class _ArcPainter extends CustomPainter {
   final double progress;
