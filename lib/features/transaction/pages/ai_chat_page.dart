@@ -224,7 +224,9 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         title: Row(
           children: [
             Image.asset(
-              'assets/images/mascot-profile.png',
+              isPremium
+                  ? 'assets/images/mascot-profile-pro.png'
+                  : 'assets/images/mascot-profile.png',
               width: 36,
               height: 36,
               fit: BoxFit.contain,
@@ -344,6 +346,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   // ── Welcome Screen ────────────────────────────────────────────────
 
   Widget _buildWelcomeView() {
+    final isPremium = ref.read(authProvider).user?.isPremium == true;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
@@ -351,7 +354,9 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
         children: [
           const SizedBox(height: AppSpacing.xl),
           Image.asset(
-            'assets/images/mascot-profile.png',
+            isPremium
+                ? 'assets/images/mascot-profile-pro.png'
+                : 'assets/images/mascot-profile.png',
             width: 100,
             height: 100,
             fit: BoxFit.contain,
@@ -746,8 +751,11 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   }
 
   Widget _aiAvatar() {
+    final isPremium = ref.read(authProvider).user?.isPremium == true;
     return Image.asset(
-      'assets/images/mascot-profile.png',
+      isPremium
+          ? 'assets/images/mascot-profile-pro.png'
+          : 'assets/images/mascot-profile.png',
       width: 28,
       height: 28,
       fit: BoxFit.contain,
@@ -888,19 +896,19 @@ class _UserBubble extends StatelessWidget {
 
 // ── AI Bubble ─────────────────────────────────────────────────────────────────
 
-class _AiBubble extends StatelessWidget {
+class _AiBubble extends ConsumerWidget {
   final String text;
   final bool isError;
   const _AiBubble({required this.text, this.isError = false});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _aiAvatar(),
+          _aiAvatar(ref),
           const SizedBox(width: AppSpacing.sm),
           Flexible(
             child: Container(
@@ -938,9 +946,12 @@ class _AiBubble extends StatelessWidget {
     );
   }
 
-  Widget _aiAvatar() {
+  Widget _aiAvatar(WidgetRef ref) {
+    final isPremium = ref.read(authProvider).user?.isPremium == true;
     return Image.asset(
-      'assets/images/mascot-profile.png',
+      isPremium
+          ? 'assets/images/mascot-profile-pro.png'
+          : 'assets/images/mascot-profile.png',
       width: 28,
       height: 28,
       fit: BoxFit.contain,
@@ -950,18 +961,18 @@ class _AiBubble extends StatelessWidget {
 
 // ── Credit Limit Bubble ───────────────────────────────────────────────────────
 
-class _CreditLimitBubble extends StatelessWidget {
+class _CreditLimitBubble extends ConsumerWidget {
   final VoidCallback onUpgrade;
   const _CreditLimitBubble({required this.onUpgrade});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _aiAvatarWidget(),
+          _aiAvatarWidget(ref),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Container(
@@ -1044,9 +1055,12 @@ class _CreditLimitBubble extends StatelessWidget {
     );
   }
 
-  Widget _aiAvatarWidget() {
+  Widget _aiAvatarWidget(WidgetRef ref) {
+    final isPremium = ref.read(authProvider).user?.isPremium == true;
     return Image.asset(
-      'assets/images/mascot-profile.png',
+      isPremium
+          ? 'assets/images/mascot-profile-pro.png'
+          : 'assets/images/mascot-profile.png',
       width: 28,
       height: 28,
       fit: BoxFit.contain,
@@ -1833,8 +1847,11 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
   }
 
   Widget _cardAvatar() {
+    final isPremium = ref.read(authProvider).user?.isPremium == true;
     return Image.asset(
-      'assets/images/mascot-profile.png',
+      isPremium
+          ? 'assets/images/mascot-profile-pro.png'
+          : 'assets/images/mascot-profile.png',
       width: 28,
       height: 28,
       fit: BoxFit.contain,

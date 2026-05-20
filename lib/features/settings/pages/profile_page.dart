@@ -61,7 +61,7 @@ class ProfilePage extends ConsumerWidget {
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 13,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha:0.8),
                         ),
                       ),
                     ],
@@ -168,7 +168,7 @@ class ProfilePage extends ConsumerWidget {
     }
     return CircleAvatar(
       radius: 42,
-      backgroundColor: Colors.white.withOpacity(0.25),
+      backgroundColor: Colors.white.withValues(alpha:0.25),
       child: Text(
         name.isNotEmpty ? name[0].toUpperCase() : 'U',
         style: const TextStyle(
@@ -189,47 +189,104 @@ class _PremiumBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
+      height: 96,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFFFFB800), Color(0xFFFF8C00)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          colors: [Color(0xFF1E3A8A), Color(0xFF3730A3)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFFB800).withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF1E3A8A).withValues(alpha:0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Row(
-        children: const [
-          Text('👑', style: TextStyle(fontSize: 28)),
-          SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Moma Premium',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
+      child: Stack(
+        children: [
+          // Lingkaran dekoratif subtle di kiri bawah
+          Positioned(
+            left: -24,
+            bottom: -24,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha:0.06),
               ),
-              Text(
-                'Nikmati semua fitur tanpa batas',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 12,
-                  color: Colors.white,
+            ),
+          ),
+
+          // Teks konten
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, 110, 0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD700).withValues(alpha:0.2),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: const Color(0xFFFFD700).withValues(alpha:0.5),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: const Text(
+                    'AKTIF',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFFFD700),
+                      letterSpacing: 1,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 6),
+                const Text(
+                  'Moma Premium',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Semua fitur tanpa batas untukmu',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    color: Colors.white.withValues(alpha:0.75),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Mascot di kanan
+          Positioned(
+            right: -4,
+            bottom: 0,
+            child: Image.asset(
+              'assets/images/mascot-banner-pro.png',
+              width: 104,
+              height: 104,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const SizedBox(width: 104),
+            ),
           ),
         ],
       ),
@@ -312,7 +369,7 @@ class _InfoRow extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.primary.withValues(alpha:0.08),
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: Icon(icon, size: 18, color: AppColors.primary),

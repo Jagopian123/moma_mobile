@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/analytics_data.dart';
 import '../providers/analytics_provider.dart';
 import '../widgets/summary_cards.dart';
@@ -53,6 +54,7 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
   Widget build(BuildContext context) {
     final period = ref.watch(analyticsPeriodProvider);
     final data = ref.watch(analyticsDataProvider);
+    final isPro = ref.watch(authProvider).user?.isPremium == true;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -100,6 +102,7 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
                     currentPage: _currentPage,
                     onPageChanged: (i) => setState(() => _currentPage = i),
                     onTap: () => context.push('/ai-insight'),
+                    isPro: isPro,
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],
@@ -202,6 +205,7 @@ class _InsightRotatingCard extends StatelessWidget {
   final int currentPage;
   final ValueChanged<int> onPageChanged;
   final VoidCallback? onTap;
+  final bool isPro;
 
   const _InsightRotatingCard({
     required this.insights,
@@ -209,6 +213,7 @@ class _InsightRotatingCard extends StatelessWidget {
     required this.currentPage,
     required this.onPageChanged,
     this.onTap,
+    this.isPro = false,
   });
 
   @override
@@ -341,7 +346,9 @@ class _InsightRotatingCard extends StatelessWidget {
               right: 0,
               bottom: 0,
               child: Image.asset(
-                'assets/images/mascot.png',
+                isPro
+                    ? 'assets/images/mascot-pro.png'
+                    : 'assets/images/mascot.png',
                 width: 90,
                 height: 90,
                 fit: BoxFit.contain,

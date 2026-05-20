@@ -258,6 +258,7 @@ class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
   @override
   Widget build(BuildContext context) {
     final insights = ref.watch(homeInsightsProvider);
+    final isPro = ref.watch(authProvider).user?.isPremium == true;
     if (insights.isEmpty) return const SizedBox.shrink();
 
     return GestureDetector(
@@ -371,7 +372,9 @@ class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
               right: 0,
               bottom: 0,
               child: Image.asset(
-                'assets/images/mascot.png',
+                isPro
+                    ? 'assets/images/mascot-pro.png'
+                    : 'assets/images/mascot.png',
                 width: 90,
                 height: 90,
                 fit: BoxFit.contain,
