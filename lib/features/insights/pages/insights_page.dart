@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -68,7 +69,7 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
               color: AppColors.textPrimary,
               onPressed: () => Navigator.of(context).pop(),
             ),
-            title: const Text('Insights', style: AppTextStyles.h3),
+            title: const Text('Analisis Keuangan', style: AppTextStyles.h3),
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: AppSpacing.md),
@@ -98,6 +99,7 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
                     pageController: _pageController,
                     currentPage: _currentPage,
                     onPageChanged: (i) => setState(() => _currentPage = i),
+                    onTap: () => context.push('/ai-insight'),
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],
@@ -199,136 +201,160 @@ class _InsightRotatingCard extends StatelessWidget {
   final PageController pageController;
   final int currentPage;
   final ValueChanged<int> onPageChanged;
+  final VoidCallback? onTap;
 
   const _InsightRotatingCard({
     required this.insights,
     required this.pageController,
     required this.currentPage,
     required this.onPageChanged,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border:
-            Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md, AppSpacing.md, 100, AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Label — static
-                const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.auto_awesome_rounded,
-                        size: 12, color: Color(0xFF6366F1)),
-                    SizedBox(width: 4),
-                    Text(
-                      'AI Insight',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF6366F1),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-
-                // PageView — fixed height so card doesn't resize
-                SizedBox(
-                  height: 54,
-                  child: PageView.builder(
-                    controller: pageController,
-                    itemCount: insights.length,
-                    onPageChanged: onPageChanged,
-                    itemBuilder: (_, i) {
-                      final insight = insights[i];
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${insight.emoji}  ${insight.title}',
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            insight.body,
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 11,
-                              color: AppColors.textSecondary,
-                              height: 1.4,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-
-                // Dot indicators
-                if (insights.length > 1) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: List.generate(
-                      insights.length.clamp(0, 8),
-                      (i) => AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        width: i == currentPage ? 14 : 5,
-                        height: 5,
-                        margin: const EdgeInsets.only(right: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6366F1).withValues(
-                              alpha: i == currentPage ? 1.0 : 0.25),
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.full),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF6FF),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(
+              color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.md, 100, AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Label — static
+                  const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.auto_awesome_rounded,
+                          size: 12, color: Color(0xFF6366F1)),
+                      SizedBox(width: 4),
+                      Text(
+                        'AI Insight',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF6366F1),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+
+                  // PageView — fixed height so card doesn't resize
+                  SizedBox(
+                    height: 54,
+                    child: PageView.builder(
+                      controller: pageController,
+                      itemCount: insights.length,
+                      onPageChanged: onPageChanged,
+                      itemBuilder: (_, i) {
+                        final insight = insights[i];
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${insight.emoji}  ${insight.title}',
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              insight.body,
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 11,
+                                color: AppColors.textSecondary,
+                                height: 1.4,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
-                ],
-              ],
-            ),
-          ),
 
-          // Mascot — static
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Image.asset(
-              'assets/images/mascot.png',
-              width: 90,
-              height: 90,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const SizedBox(
-                width: 90,
-                height: 90,
-                child: Center(
-                    child: Text('🤖', style: TextStyle(fontSize: 40))),
+                  // Dot indicators + Lihat Semua
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      if (insights.length > 1)
+                        ...List.generate(
+                          insights.length.clamp(0, 8),
+                          (i) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            width: i == currentPage ? 14 : 5,
+                            height: 5,
+                            margin: const EdgeInsets.only(right: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6366F1).withValues(
+                                  alpha: i == currentPage ? 1.0 : 0.25),
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.full),
+                            ),
+                          ),
+                        ),
+                      const Spacer(),
+                      Text(
+                        'Lihat Semua',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              const Color(0xFF6366F1).withValues(alpha: 0.8),
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 10,
+                        color:
+                            const Color(0xFF6366F1).withValues(alpha: 0.8),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+
+            // Mascot — static
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Image.asset(
+                'assets/images/mascot.png',
+                width: 90,
+                height: 90,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const SizedBox(
+                  width: 90,
+                  height: 90,
+                  child: Center(
+                      child: Text('🤖', style: TextStyle(fontSize: 40))),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

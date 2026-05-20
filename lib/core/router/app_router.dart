@@ -19,6 +19,7 @@ import '../../features/debt/pages/debt_page.dart';
 import '../../features/home/pages/home_page.dart';
 import '../../features/settings/pages/settings_page.dart';
 import '../../features/insights/pages/insights_page.dart';
+import '../../features/insights/pages/ai_insight_page.dart';
 import '../../features/subscription/pages/subscription_page.dart';
 import '../../features/categories/pages/manage_categories_page.dart';
 import '../../features/notifications/pages/notification_page.dart';
@@ -197,6 +198,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/insights',
         name: 'insights',
         builder: (_, __) => const InsightsPage(),
+      ),
+      GoRoute(
+        path: '/ai-insight',
+        name: 'aiInsight',
+        builder: (_, __) => const AiInsightPage(),
       ),
       GoRoute(
         path: '/premium',

@@ -152,10 +152,16 @@ class SettingsPage extends ConsumerWidget {
                 onTap: () => context.push('/debt'),
               ),
               _SettingsItem(
-                icon: Icons.insights_rounded,
+                icon: Icons.bar_chart_rounded,
                 iconColor: const Color(0xFF6366F1),
-                label: 'Insight AI',
+                label: 'Analisis Keuangan',
                 onTap: () => context.push('/insights'),
+              ),
+              _SettingsItem(
+                icon: Icons.auto_awesome_rounded,
+                iconColor: const Color(0xFF6366F1),
+                label: 'AI Insight',
+                onTap: () => context.push('/ai-insight'),
               ),
               _SettingsItem(
                 icon: Icons.category_rounded,

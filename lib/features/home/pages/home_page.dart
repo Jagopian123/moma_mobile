@@ -132,7 +132,7 @@ class HomePage extends ConsumerWidget {
 
                   // ── Insight Card ───────────────────────────────
                   _HomeInsightSection(
-                    onTap: () => context.push('/insights'),
+                    onTap: () => context.push('/ai-insight'),
                   ),
                   const SizedBox(height: AppSpacing.lg),
 
