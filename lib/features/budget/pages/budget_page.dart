@@ -10,6 +10,8 @@ import '../../../shared/widgets/app_circular_progress.dart';
 import '../../../shared/widgets/app_progress_bar.dart';
 import '../providers/budget_provider.dart';
 import '../widgets/budget_form_sheet.dart';
+import '../../../shared/providers/plan_limits_provider.dart';
+import '../../../shared/widgets/plan_limit_sheet.dart';
 
 class BudgetPage extends ConsumerWidget {
   const BudgetPage({super.key});
@@ -31,7 +33,15 @@ class BudgetPage extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showForm(context),
+        onPressed: () {
+          final limits = ref.read(planLimitsProvider);
+          if (!limits.canAddBudgets(budgets.length)) {
+            showPlanLimitSheet(context,
+                featureName: 'Budget', freeLimit: limits.maxBudgets);
+            return;
+          }
+          _showForm(context);
+        },
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add_rounded, color: Colors.white),
         label: const Text(
@@ -50,7 +60,15 @@ class BudgetPage extends ConsumerWidget {
               title: 'Belum ada budget',
               description: 'Tambahkan budget untuk mengontrol pengeluaranmu',
               actionLabel: 'Tambah Budget',
-              onAction: () => _showForm(context),
+              onAction: () {
+                final limits = ref.read(planLimitsProvider);
+                if (!limits.canAddBudgets(budgets.length)) {
+                  showPlanLimitSheet(context,
+                      featureName: 'Budget', freeLimit: limits.maxBudgets);
+                  return;
+                }
+                _showForm(context);
+              },
             )
           : ListView(
               padding: const EdgeInsets.fromLTRB(

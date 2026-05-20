@@ -17,6 +17,7 @@ import '../../transaction/providers/transaction_provider.dart';
 import '../../budget/providers/budget_provider.dart';
 import '../../financial_plan/providers/financial_plan_provider.dart';
 import '../../debt/providers/debt_provider.dart';
+import '../../../shared/providers/app_info_provider.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -236,7 +237,7 @@ class SettingsPage extends ConsumerWidget {
                 icon: Icons.info_outline_rounded,
                 iconColor: AppColors.primary,
                 label: 'Versi',
-                value: '1.0.0',
+                value: ref.watch(appVersionProvider).valueOrNull ?? '...',
                 onTap: null,
               ),
               _SettingsItem(

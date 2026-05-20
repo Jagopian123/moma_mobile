@@ -12,6 +12,8 @@ import '../providers/investment_provider.dart';
 import '../widgets/wallet_form_sheet.dart';
 import '../widgets/investment_form_sheet.dart';
 import '../../home/providers/home_provider.dart';
+import '../../../shared/providers/plan_limits_provider.dart';
+import '../../../shared/widgets/plan_limit_sheet.dart';
 
 // ── Amount mask helpers ───────────────────────────────────────────────────────
 
@@ -115,6 +117,15 @@ class AssetPage extends ConsumerWidget {
 
   void _showWalletForm(BuildContext context, WidgetRef ref,
       [WalletModel? wallet]) {
+    if (wallet == null) {
+      final wallets = ref.read(walletProvider);
+      final limits = ref.read(planLimitsProvider);
+      if (!limits.canAddWallet(wallets.length)) {
+        showPlanLimitSheet(context,
+            featureName: 'Dompet', freeLimit: limits.maxWallets);
+        return;
+      }
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -125,6 +136,15 @@ class AssetPage extends ConsumerWidget {
 
   void _showInvestmentForm(BuildContext context, WidgetRef ref,
       [InvestmentModel? investment]) {
+    if (investment == null) {
+      final investments = ref.read(investmentProvider);
+      final limits = ref.read(planLimitsProvider);
+      if (!limits.canAddInvestment(investments.length)) {
+        showPlanLimitSheet(context,
+            featureName: 'Investasi', freeLimit: limits.maxInvestments);
+        return;
+      }
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

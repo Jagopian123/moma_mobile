@@ -7,6 +7,11 @@ import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/premium_provider.dart';
 
+// ── Color constants ───────────────────────────────────────────────────────────
+const _kIndigo = Color(0xFF4F46E5);
+const _kIndigoDark = Color(0xFF1E1B4B);
+const _kIndigoMid = Color(0xFF312E81);
+
 class PremiumPage extends ConsumerStatefulWidget {
   const PremiumPage({super.key});
 
@@ -20,7 +25,6 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
   @override
   void initState() {
     super.initState();
-    // Reset any lingering error/success from a previous session
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(premiumProvider.notifier).resetStatus();
     });
@@ -29,13 +33,13 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
   @override
   Widget build(BuildContext context) {
     final premium = ref.watch(premiumProvider);
-    final authState = ref.watch(authProvider);
-    final isPremium = authState.user?.isPremium ?? false;
+    final isPremium = ref.watch(authProvider).user?.isPremium ?? false;
 
     ref.listen<PremiumState>(premiumProvider, (prev, next) {
       if (next.status == PurchaseFlowStatus.success) {
         _showSuccess();
-      } else if (next.status == PurchaseFlowStatus.error && next.errorMessage != null) {
+      } else if (next.status == PurchaseFlowStatus.error &&
+          next.errorMessage != null) {
         _showError(next.errorMessage!);
       }
     });
@@ -44,48 +48,47 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          _buildAppBar(isPremium),
+          // ── App Bar ──────────────────────────────────────────────────────────
+          SliverAppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            pinned: false,
+            floating: true,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_kIndigoDark, _kIndigoMid],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+            expandedHeight: 0,
+          ),
+
           SliverToBoxAdapter(
             child: Column(
               children: [
                 _buildHeader(isPremium),
-                _buildFeatureList(),
-                if (!isPremium) ...[
-                  _buildPlanCards(premium),
+                if (isPremium)
+                  _buildAlreadyPremium()
+                else ...[
+                  _buildComparisonTable(),
+                  _buildPlanSelector(premium),
                   _buildBuyButton(premium),
+                  _buildTrustRow(),
                   _buildFooterNote(),
                 ],
-                const SizedBox(height: 32),
+                const SizedBox(height: 40),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  // ── App Bar ───────────────────────────────────────────────────────────────
-
-  SliverAppBar _buildAppBar(bool isPremium) {
-    return SliverAppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      pinned: false,
-      floating: true,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      flexibleSpace: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-      ),
-      expandedHeight: 0,
     );
   }
 
@@ -96,19 +99,20 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+          colors: [_kIndigoDark, _kIndigoMid],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 36),
       child: Column(
         children: [
+          // Crown icon
           Container(
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.workspace_premium_rounded,
@@ -116,10 +120,10 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            isPremium ? 'Kamu sudah Premium!' : 'Upgrade ke Premium',
+            isPremium ? 'Kamu sudah Pro! 🎉' : 'MOMA Pro',
             style: const TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
@@ -128,64 +132,212 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
           Text(
             isPremium
                 ? 'Nikmati semua fitur tanpa batas'
-                : 'Catat transaksi dengan AI tanpa batas bulanan',
+                : 'Kelola keuangan tanpa batas.\nAnalisis lebih dalam, keputusan lebih cerdas.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.75),
+              fontSize: 13,
+              height: 1.5,
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
+          if (!isPremium) ...[
+            const SizedBox(height: 20),
+            // Social proof row
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.full),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Star icons
+                  ...List.generate(
+                    5,
+                    (_) => const Icon(Icons.star_rounded,
+                        color: Colors.amber, size: 14),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Dipercaya ribuan pengguna MOMA',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  // ── Feature List ──────────────────────────────────────────────────────────
+  // ── Already Premium ───────────────────────────────────────────────────────
 
-  Widget _buildFeatureList() {
-    final features = [
-      (Icons.auto_awesome_rounded, 'AI Catat Unlimited',
-          'Tanpa batas bulanan — free hanya 30x/bulan'),
-      (Icons.mic_rounded, 'Catat Suara & Scan Struk',
-          'Gunakan sesukamu setiap hari'),
-      (Icons.flash_on_rounded, 'Prioritas Kecepatan AI',
-          'Antrian prioritas di server AI'),
-      (Icons.support_agent_rounded, 'Support Prioritas',
-          'Respons lebih cepat via email'),
-    ];
-
+  Widget _buildAlreadyPremium() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+      padding: const EdgeInsets.all(24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Yang kamu dapatkan',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.income.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(
+                  color: AppColors.income.withValues(alpha: 0.25)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.verified_rounded,
+                    color: AppColors.income, size: 28),
+                SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Langganan Aktif',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.income,
+                        ),
+                      ),
+                      Text(
+                        'Semua fitur Pro sudah bisa kamu nikmati.',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          ...features.map((f) => _FeatureRow(
-                icon: f.$1,
-                title: f.$2,
-                subtitle: f.$3,
+          const SizedBox(height: 24),
+          // Show features they enjoy
+          ..._proFeatures.map((f) => _ProFeatureRow(
+                icon: f.icon,
+                title: f.title,
+                subtitle: f.subtitle,
               )),
         ],
       ),
     );
   }
 
-  // ── Plan Cards ────────────────────────────────────────────────────────────
+  // ── Comparison Table ──────────────────────────────────────────────────────
 
-  Widget _buildPlanCards(PremiumState premium) {
+  Widget _buildComparisonTable() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section title
+          Row(
+            children: [
+              const Text(
+                'Perbandingan Paket',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              // Column headers — right-aligned
+              SizedBox(
+                width: 130,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Free',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _kIndigo,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: const Text(
+                          'Pro ⭐',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Table card
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.border),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: _tableRows.asMap().entries.map((entry) {
+                final i = entry.key;
+                final row = entry.value;
+                return _ComparisonRow(
+                  label: row.label,
+                  freeValue: row.freeValue,
+                  proValue: row.proValue,
+                  isLimited: row.isLimited,
+                  isAlternate: i.isEven,
+                  isLast: i == _tableRows.length - 1,
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Plan Selector ─────────────────────────────────────────────────────────
+
+  Widget _buildPlanSelector(PremiumState premium) {
     if (!premium.isAvailable) {
       return const Padding(
-        padding: EdgeInsets.all(24),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Text(
           'Google Play tidak tersedia di perangkat ini.',
           textAlign: TextAlign.center,
@@ -207,7 +359,7 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -221,6 +373,8 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
             ),
           ),
           const SizedBox(height: 12),
+
+          // Yearly card — recommended
           _PlanCard(
             productId: AppConstants.iapYearly,
             title: 'Tahunan',
@@ -231,10 +385,12 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
             onTap: () => setState(() => _selected = AppConstants.iapYearly),
           ),
           const SizedBox(height: 10),
+
+          // Monthly card
           _PlanCard(
             productId: AppConstants.iapMonthly,
             title: 'Bulanan',
-            subtitle: 'Bayar bulan per bulan',
+            subtitle: 'Bayar bulan per bulan, batalkan kapan saja',
             price: _priceLabel(premium.monthly),
             badge: null,
             isSelected: _selected == AppConstants.iapMonthly,
@@ -254,25 +410,21 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
 
   Widget _buildBuyButton(PremiumState premium) {
     final isLoading = premium.status == PurchaseFlowStatus.loading;
-
-    ProductDetails? selected;
-    if (_selected == AppConstants.iapYearly) {
-      selected = premium.yearly;
-    } else {
-      selected = premium.monthly;
-    }
+    final selected = _selected == AppConstants.iapYearly
+        ? premium.yearly
+        : premium.monthly;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: SizedBox(
         width: double.infinity,
-        height: 52,
+        height: 54,
         child: ElevatedButton(
           onPressed: (isLoading || selected == null || !premium.isAvailable)
               ? null
-              : () => ref.read(premiumProvider.notifier).buy(selected!),
+              : () => ref.read(premiumProvider.notifier).buy(selected),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF4F46E5),
+            backgroundColor: _kIndigo,
             foregroundColor: Colors.white,
             disabledBackgroundColor: AppColors.border,
             elevation: 0,
@@ -285,38 +437,183 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
                   width: 22,
                   height: 22,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
+                      strokeWidth: 2, color: Colors.white),
                 )
-              : const Text(
-                  'Berlangganan Sekarang',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Mulai Berlangganan',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      _selected == AppConstants.iapYearly
+                          ? 'Hemat 28% vs bulanan'
+                          : 'Batalkan kapan saja',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 10,
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
+                    ),
+                  ],
                 ),
         ),
       ),
     );
   }
 
+  // ── Trust Row ─────────────────────────────────────────────────────────────
+
+  Widget _buildTrustRow() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Row(
+        children: [
+          _TrustBadge(
+            icon: Icons.lock_outline_rounded,
+            label: 'Pembayaran\nAman',
+          ),
+          const SizedBox(width: 10),
+          _TrustBadge(
+            icon: Icons.cancel_outlined,
+            label: 'Batalkan\nKapan Saja',
+          ),
+          const SizedBox(width: 10),
+          _TrustBadge(
+            icon: Icons.sync_rounded,
+            label: 'Update\nOtomatis',
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFooterNote() {
     return const Padding(
-      padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Text(
-        'Langganan dikelola oleh Google Play. Batalkan kapan saja di Google Play Store → Subscriptions.',
+        'Langganan dikelola Google Play. Perpanjang otomatis kecuali dibatalkan minimal 24 jam sebelum periode berakhir.',
         textAlign: TextAlign.center,
         style: TextStyle(
           fontFamily: 'Poppins',
-          fontSize: 11,
+          fontSize: 10,
           color: AppColors.textHint,
           height: 1.5,
         ),
       ),
     );
   }
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+
+  static const _tableRows = [
+    _TableRow(
+      label: 'Catat Transaksi',
+      freeValue: 'Unlimited',
+      proValue: 'Unlimited',
+      isLimited: false,
+    ),
+    _TableRow(
+      label: 'AI Catat Transaksi',
+      freeValue: '30x/bulan',
+      proValue: 'Unlimited',
+      isLimited: true,
+    ),
+    _TableRow(
+      label: 'Budget',
+      freeValue: 'Maks 3',
+      proValue: 'Unlimited',
+      isLimited: true,
+    ),
+    _TableRow(
+      label: 'Rencana Finansial',
+      freeValue: 'Maks 2',
+      proValue: 'Unlimited',
+      isLimited: true,
+    ),
+    _TableRow(
+      label: 'Hutang & Piutang',
+      freeValue: 'Maks 5',
+      proValue: 'Unlimited',
+      isLimited: true,
+    ),
+    _TableRow(
+      label: 'Dompet / Aset',
+      freeValue: 'Maks 5',
+      proValue: 'Unlimited',
+      isLimited: true,
+    ),
+    _TableRow(
+      label: 'Langganan',
+      freeValue: 'Maks 5',
+      proValue: 'Unlimited',
+      isLimited: true,
+    ),
+    _TableRow(
+      label: 'Investasi',
+      freeValue: 'Maks 3',
+      proValue: 'Unlimited',
+      isLimited: true,
+    ),
+    _TableRow(
+      label: 'AI Insight',
+      freeValue: '3 teratas',
+      proValue: 'Semua insight',
+      isLimited: true,
+    ),
+    _TableRow(
+      label: 'Analisis Keuangan',
+      freeValue: 'Lengkap',
+      proValue: 'Lengkap',
+      isLimited: false,
+    ),
+    _TableRow(
+      label: 'Export Data',
+      freeValue: 'CSV, 3 bln',
+      proValue: 'PDF+Excel, semua',
+      isLimited: true,
+    ),
+    _TableRow(
+      label: 'Backup Otomatis',
+      freeValue: '—',
+      proValue: '✓',
+      isLimited: true,
+    ),
+    _TableRow(
+      label: 'Support',
+      freeValue: 'Normal',
+      proValue: 'Prioritas',
+      isLimited: true,
+    ),
+  ];
+
+  static const _proFeatures = [
+    _FeatureDef(
+      icon: Icons.all_inclusive_rounded,
+      title: 'Semua Fitur Tanpa Batas',
+      subtitle: 'Budget, rencana, hutang, investasi — unlimited',
+    ),
+    _FeatureDef(
+      icon: Icons.auto_awesome_rounded,
+      title: 'Semua AI Insight',
+      subtitle: 'Analisis kondisi keuanganmu secara menyeluruh',
+    ),
+    _FeatureDef(
+      icon: Icons.cloud_upload_rounded,
+      title: 'Backup Otomatis',
+      subtitle: 'Data aman tersimpan di cloud setiap hari',
+    ),
+    _FeatureDef(
+      icon: Icons.download_rounded,
+      title: 'Export Lengkap',
+      subtitle: 'Unduh semua riwayat dalam format PDF & Excel',
+    ),
+  ];
 
   // ── Dialogs ───────────────────────────────────────────────────────────────
 
@@ -328,24 +625,33 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check_circle_rounded,
-                color: AppColors.income, size: 64),
-            SizedBox(height: 12),
-            Text(
-              'Selamat!',
+            // Mascot or icon
+            Image.asset(
+              'assets/images/mascot.png',
+              width: 90,
+              height: 90,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.check_circle_rounded,
+                color: AppColors.income,
+                size: 64,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Selamat, kamu Pro! 🎉',
               style: TextStyle(
                 fontFamily: 'Poppins',
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),
             ),
-            SizedBox(height: 6),
-            Text(
-              'Premium berhasil diaktifkan.\nSelamat menikmati AI tanpa batas!',
+            const SizedBox(height: 6),
+            const Text(
+              'Semua fitur Pro sudah aktif.\nNikmati pengalaman keuangan tanpa batas!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Poppins',
@@ -361,11 +667,11 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pop(); // close dialog
-                Navigator.of(context).pop(); // back to previous page
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4F46E5),
+                backgroundColor: _kIndigo,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -390,10 +696,8 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
-        ),
+        content: Text(message,
+            style: const TextStyle(fontFamily: 'Poppins', fontSize: 13)),
         backgroundColor: AppColors.expense,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 4),
@@ -403,13 +707,146 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
   }
 }
 
-// ── Feature Row ───────────────────────────────────────────────────────────────
+// ── Data models ───────────────────────────────────────────────────────────────
 
-class _FeatureRow extends StatelessWidget {
+class _TableRow {
+  final String label;
+  final String freeValue;
+  final String proValue;
+  final bool isLimited; // true = free value shown as restricted
+
+  const _TableRow({
+    required this.label,
+    required this.freeValue,
+    required this.proValue,
+    required this.isLimited,
+  });
+}
+
+class _FeatureDef {
   final IconData icon;
   final String title;
   final String subtitle;
-  const _FeatureRow({
+
+  const _FeatureDef({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+}
+
+// ── Comparison Row ────────────────────────────────────────────────────────────
+
+class _ComparisonRow extends StatelessWidget {
+  final String label;
+  final String freeValue;
+  final String proValue;
+  final bool isLimited;
+  final bool isAlternate;
+  final bool isLast;
+
+  const _ComparisonRow({
+    required this.label,
+    required this.freeValue,
+    required this.proValue,
+    required this.isLimited,
+    required this.isAlternate,
+    required this.isLast,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final freeColor = isLimited
+        ? const Color(0xFFB45309) // amber-700
+        : AppColors.textSecondary;
+    final freeBg = isLimited
+        ? const Color(0xFFFEF3C7) // amber-100
+        : Colors.transparent;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+      decoration: BoxDecoration(
+        color: isAlternate
+            ? const Color(0xFFF8FAFF)
+            : AppColors.white,
+        border: isLast
+            ? null
+            : const Border(
+                bottom: BorderSide(color: AppColors.border, width: 0.5)),
+      ),
+      child: Row(
+        children: [
+          // Feature label
+          Expanded(
+            flex: 5,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+
+          // Free value
+          Expanded(
+            flex: 3,
+            child: Center(
+              child: Container(
+                padding: isLimited
+                    ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
+                    : EdgeInsets.zero,
+                decoration: BoxDecoration(
+                  color: freeBg,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Text(
+                  freeValue,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    fontWeight:
+                        isLimited ? FontWeight.w600 : FontWeight.w400,
+                    color: freeColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Pro value
+          Expanded(
+            flex: 3,
+            child: Center(
+              child: Text(
+                proValue,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: _kIndigo,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Pro Feature Row (for already-premium view) ────────────────────────────────
+
+class _ProFeatureRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _ProFeatureRow({
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -418,7 +855,7 @@ class _FeatureRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -426,10 +863,10 @@ class _FeatureRow extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFF4F46E5).withValues(alpha: 0.1),
+              color: _kIndigo.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
-            child: Icon(icon, color: const Color(0xFF4F46E5), size: 20),
+            child: Icon(icon, color: _kIndigo, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -440,7 +877,7 @@ class _FeatureRow extends StatelessWidget {
                   title,
                   style: const TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
@@ -449,8 +886,9 @@ class _FeatureRow extends StatelessWidget {
                   subtitle,
                   style: const TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 12,
+                    fontSize: 11,
                     color: AppColors.textSecondary,
+                    height: 1.4,
                   ),
                 ),
               ],
@@ -458,6 +896,46 @@ class _FeatureRow extends StatelessWidget {
           ),
           const Icon(Icons.check_rounded, color: AppColors.income, size: 18),
         ],
+      ),
+    );
+  }
+}
+
+// ── Trust Badge ───────────────────────────────────────────────────────────────
+
+class _TrustBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _TrustBadge({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 20, color: _kIndigo),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+                height: 1.3,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -486,8 +964,6 @@ class _PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const selectedColor = Color(0xFF4F46E5);
-
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -495,16 +971,17 @@ class _PlanCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? selectedColor.withValues(alpha: 0.06)
+              ? _kIndigo.withValues(alpha: 0.06)
               : AppColors.white,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
-            color: isSelected ? selectedColor : AppColors.border,
+            color: isSelected ? _kIndigo : AppColors.border,
             width: isSelected ? 2 : 1,
           ),
         ),
         child: Row(
           children: [
+            // Radio circle
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               width: 22,
@@ -512,16 +989,18 @@ class _PlanCard extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? selectedColor : AppColors.border,
+                  color: isSelected ? _kIndigo : AppColors.border,
                   width: 2,
                 ),
-                color: isSelected ? selectedColor : Colors.transparent,
+                color: isSelected ? _kIndigo : Colors.transparent,
               ),
               child: isSelected
                   ? const Icon(Icons.check, color: Colors.white, size: 14)
                   : null,
             ),
             const SizedBox(width: 12),
+
+            // Label + subtitle
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -532,10 +1011,10 @@ class _PlanCard extends StatelessWidget {
                         title,
                         style: TextStyle(
                           fontFamily: 'Poppins',
-                          fontSize: 15,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: isSelected
-                              ? selectedColor
+                              ? _kIndigo
                               : AppColors.textPrimary,
                         ),
                       ),
@@ -566,20 +1045,22 @@ class _PlanCard extends StatelessWidget {
                     subtitle,
                     style: const TextStyle(
                       fontFamily: 'Poppins',
-                      fontSize: 12,
+                      fontSize: 11,
                       color: AppColors.textSecondary,
                     ),
                   ),
                 ],
               ),
             ),
+
+            // Price
             Text(
               price,
               style: TextStyle(
                 fontFamily: 'Poppins',
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: isSelected ? selectedColor : AppColors.textPrimary,
+                color: isSelected ? _kIndigo : AppColors.textPrimary,
               ),
             ),
           ],

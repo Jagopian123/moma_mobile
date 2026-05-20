@@ -12,6 +12,8 @@ import '../../../shared/widgets/app_card.dart';
 import '../providers/subscription_provider.dart';
 import '../widgets/subscription_form_sheet.dart';
 import '../../transaction/providers/transaction_provider.dart';
+import '../../../shared/providers/plan_limits_provider.dart';
+import '../../../shared/widgets/plan_limit_sheet.dart';
 
 class SubscriptionPage extends ConsumerStatefulWidget {
   const SubscriptionPage({super.key});
@@ -37,6 +39,15 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage>
   }
 
   void _showForm({SubscriptionModel? existing}) {
+    if (existing == null) {
+      final subs = ref.read(subscriptionProvider);
+      final limits = ref.read(planLimitsProvider);
+      if (!limits.canAddSubscription(subs.length)) {
+        showPlanLimitSheet(context,
+            featureName: 'Langganan', freeLimit: limits.maxSubscriptions);
+        return;
+      }
+    }
     showAppBottomSheet(
       context: context,
       title: existing == null ? 'Tambah Langganan' : 'Edit Langganan',

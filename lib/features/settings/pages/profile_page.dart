@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../shared/providers/app_info_provider.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -136,7 +137,7 @@ class ProfilePage extends ConsumerWidget {
                       _InfoRow(
                         icon: Icons.info_outline_rounded,
                         label: 'Versi',
-                        value: '1.0.0',
+                        value: ref.watch(appVersionProvider).valueOrNull ?? '...',
                         isLast: true,
                       ),
                     ],

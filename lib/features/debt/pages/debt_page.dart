@@ -10,6 +10,8 @@ import '../../../shared/widgets/app_card.dart';
 import '../providers/debt_provider.dart';
 import '../widgets/debt_form_sheet.dart';
 import '../widgets/payment_sheet.dart';
+import '../../../shared/providers/plan_limits_provider.dart';
+import '../../../shared/widgets/plan_limit_sheet.dart';
 
 class DebtPage extends ConsumerStatefulWidget {
   const DebtPage({super.key});
@@ -147,6 +149,13 @@ class _DebtPageState extends ConsumerState<DebtPage>
   }
 
   void _showForm(BuildContext context, String type) {
+    final allDebts = ref.read(debtProvider);
+    final limits = ref.read(planLimitsProvider);
+    if (!limits.canAddDebt(allDebts.length)) {
+      showPlanLimitSheet(context,
+          featureName: 'Hutang & Piutang', freeLimit: limits.maxDebts);
+      return;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

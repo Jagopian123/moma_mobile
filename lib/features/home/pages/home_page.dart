@@ -882,6 +882,7 @@ class _RecentTransactions extends StatelessWidget {
     if (recent.isEmpty) {
       return const AppEmptyState(
         emoji: '📭',
+        imagePath: 'assets/images/mascot-transaksi.png',
         title: 'Belum ada transaksi',
         description: 'Tap tombol + untuk mulai mencatat',
       );

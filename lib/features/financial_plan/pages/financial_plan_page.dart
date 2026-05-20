@@ -11,6 +11,8 @@ import '../../../shared/widgets/app_circular_progress.dart';
 import '../providers/financial_plan_provider.dart';
 import '../widgets/financial_plan_form_sheet.dart';
 import '../widgets/contribution_sheet.dart';
+import '../../../shared/providers/plan_limits_provider.dart';
+import '../../../shared/widgets/plan_limit_sheet.dart';
 
 class FinancialPlanPage extends ConsumerWidget {
   const FinancialPlanPage({super.key});
@@ -32,7 +34,16 @@ class FinancialPlanPage extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showForm(context),
+        onPressed: () {
+          final limits = ref.read(planLimitsProvider);
+          if (!limits.canAddFinancialPlan(plans.length)) {
+            showPlanLimitSheet(context,
+                featureName: 'Rencana Finansial',
+                freeLimit: limits.maxFinancialPlans);
+            return;
+          }
+          _showForm(context);
+        },
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add_rounded, color: Colors.white),
         label: const Text(
@@ -51,7 +62,16 @@ class FinancialPlanPage extends ConsumerWidget {
               title: 'Belum ada rencana',
               description: 'Tambahkan rencana finansialmu dan mulai menabung',
               actionLabel: 'Tambah Rencana',
-              onAction: () => _showForm(context),
+              onAction: () {
+                final limits = ref.read(planLimitsProvider);
+                if (!limits.canAddFinancialPlan(plans.length)) {
+                  showPlanLimitSheet(context,
+                      featureName: 'Rencana Finansial',
+                      freeLimit: limits.maxFinancialPlans);
+                  return;
+                }
+                _showForm(context);
+              },
             )
           : ListView(
               padding: const EdgeInsets.fromLTRB(
