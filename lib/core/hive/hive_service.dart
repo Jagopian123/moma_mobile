@@ -73,6 +73,12 @@ class HiveService {
   // Hapus semua data finansial user (wallets, transactions, budgets, dll)
   // dipanggil saat ganti akun / logout
   static Future<void> clearAllUserData() async {
+    // Hapus semua kategori kustom, biarkan kategori default
+    final customCategoryKeys = categories.values
+        .where((c) => !c.isDefault)
+        .map((c) => c.id)
+        .toList();
+
     await Future.wait([
       wallets.clear(),
       transactions.clear(),
@@ -81,6 +87,8 @@ class HiveService {
       debts.clear(),
       investments.clear(),
       subscriptions.clear(),
+      categories.deleteAll(customCategoryKeys),
+      notifications.clear(),
     ]);
   }
 }

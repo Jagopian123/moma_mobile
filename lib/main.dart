@@ -10,9 +10,11 @@ import 'core/router/app_router.dart';
 import 'core/services/api_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
+import 'features/auth/providers/auth_provider.dart';
 import 'features/notifications/providers/notification_provider.dart';
 import 'features/security/providers/security_provider.dart';
 import 'features/security/widgets/lock_screen.dart';
+import 'features/settings/providers/backup_provider.dart';
 
 // Global key untuk ScaffoldMessenger
 // Dipakai supaya snackbar bisa muncul dari mana saja termasuk dalam bottom sheet
@@ -90,11 +92,20 @@ class _MomaAppState extends ConsumerState<MomaApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Kunci app saat masuk background
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       ref.read(securityProvider.notifier).lock();
+    } else if (state == AppLifecycleState.resumed) {
+      _tryAutoBackup();
     }
+  }
+
+  void _tryAutoBackup() {
+    final user = ref.read(authProvider).user;
+    if (user == null) return;
+    ref.read(backupProvider.notifier).autoBackupIfNeeded(
+      isPremium: user.isPremium,
+    );
   }
 
   @override

@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -15,7 +18,9 @@ import '../../asset/providers/wallet_provider.dart';
 import '../../budget/providers/budget_provider.dart';
 import '../../debt/providers/debt_provider.dart';
 import '../../financial_plan/providers/financial_plan_provider.dart';
+import '../../subscription/providers/subscription_provider.dart';
 import '../../transaction/providers/transaction_provider.dart';
+import '../../../features/settings/providers/backup_provider.dart';
 
 final _googleSignIn = GoogleSignIn(
   serverClientId: AppConstants.googleWebClientId,
@@ -144,10 +149,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  // Backup dulu sebelum logout — SettingsPage menangkap exception dan membatalkan logout.
   Future<void> signOut() async {
-    await BackupService().upload();
-
     await _googleSignIn.signOut();
     try {
       await _api.post('/auth/logout').timeout(const Duration(seconds: 5));
@@ -210,6 +212,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _ref.invalidate(debtProvider);
     _ref.invalidate(financialPlanProvider);
     _ref.invalidate(investmentProvider);
+    _ref.invalidate(subscriptionProvider);
+    _ref.invalidate(backupProvider);
   }
 
   void updateUser(UserModel user) {
@@ -255,7 +259,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
       AppConstants.keySecurityEnabled,
       AppConstants.keyBiometricEnabled,
       AppConstants.keyPinHash,
+      AppConstants.keyAiCreditsRemaining,
     ]);
+    await _clearAiChatFile();
+  }
+
+  Future<void> _clearAiChatFile() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/ai_chat_state.json');
+      if (await file.exists()) await file.delete();
+    } catch (_) {}
   }
 }
 

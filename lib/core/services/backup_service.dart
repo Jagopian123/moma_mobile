@@ -43,6 +43,7 @@ String _friendlyError(Object e) {
         final code = e.response?.statusCode;
         if (code == 401) return 'Sesi kamu habis. Silakan login ulang.';
         if (code == 413) return 'Data terlalu besar untuk dikirim. Hubungi tim Moma.';
+        if (code == 429) return 'Backup gratis hanya tersedia sekali seminggu. Coba lagi minggu depan.';
         if (code != null && code >= 500) {
           return 'Server Moma sedang bermasalah. Coba beberapa menit lagi.';
         }
@@ -149,5 +150,17 @@ class BackupService {
   DateTime? get lastBackupTime {
     final ts = HiveService.user.get(AppConstants.keyLastBackup) as String?;
     return ts != null ? DateTime.tryParse(ts) : null;
+  }
+
+  // ── Cek apakah sudah waktunya auto backup ────────────────────
+  // Premium: tiap 22 jam (daily dengan sedikit slack)
+  // Free: tiap 6.5 hari (weekly dengan sedikit slack)
+  bool canAutoBackup(bool isPremium) {
+    final last = lastBackupTime;
+    if (last == null) return true;
+    final threshold = isPremium
+        ? const Duration(hours: 22)
+        : const Duration(days: 6, hours: 12);
+    return DateTime.now().difference(last) >= threshold;
   }
 }

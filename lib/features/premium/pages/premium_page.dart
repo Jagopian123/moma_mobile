@@ -580,8 +580,8 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
     ),
     _TableRow(
       label: 'Backup Otomatis',
-      freeValue: '—',
-      proValue: '✓',
+      freeValue: 'Mingguan',
+      proValue: 'Harian + Manual',
       isLimited: true,
     ),
     _TableRow(
@@ -605,8 +605,8 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
     ),
     _FeatureDef(
       icon: Icons.cloud_upload_rounded,
-      title: 'Backup Otomatis',
-      subtitle: 'Data aman tersimpan di cloud setiap hari',
+      title: 'Backup Harian + Manual',
+      subtitle: 'Backup otomatis tiap hari & bisa backup kapan saja',
     ),
     _FeatureDef(
       icon: Icons.download_rounded,

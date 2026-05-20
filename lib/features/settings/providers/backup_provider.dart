@@ -59,6 +59,21 @@ class BackupNotifier extends StateNotifier<BackupState> {
     }
   }
 
+  // Auto backup diam-diam — tidak mengubah status loading, error diabaikan.
+  Future<void> autoBackupIfNeeded({required bool isPremium}) async {
+    if (state.isLoading) return;
+    if (!_service.canAutoBackup(isPremium)) return;
+    try {
+      await _service.upload();
+      final last = _service.lastBackupTime;
+      if (last != null) {
+        state = state.copyWith(lastBackedAt: last);
+      }
+    } catch (_) {
+      // Silent — auto backup gagal tidak perlu ditampilkan ke user
+    }
+  }
+
   void resetStatus() {
     state = state.copyWith(status: BackupStatus.idle);
   }

@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/backup_service.dart';
 import '../../../core/services/export_service.dart';
 import '../../../core/services/import_service.dart';
 import 'package:intl/intl.dart';
@@ -206,11 +207,12 @@ class SettingsPage extends ConsumerWidget {
                         ? DateFormat('dd/MM HH:mm').format(backup.lastBackedAt!)
                         : null,
                 badge: backup.lastBackedAt == null && !backup.isLoading
-                    ? (user?.isPremium == true ? 'Belum pernah' : 'Premium')
+                    ? (user?.isPremium == true ? 'Belum pernah' : 'Auto Mingguan')
                     : null,
-                onTap: backup.isLoading
-                    ? null
-                    : () => _confirmBackup(context, ref, user),
+                showArrow: user?.isPremium == true,
+                onTap: (user?.isPremium == true && !backup.isLoading)
+                    ? () => _confirmBackup(context, ref)
+                    : null,
               ),
               _SettingsItem(
                 icon: Icons.download_rounded,
@@ -315,70 +317,7 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmBackup(BuildContext context, WidgetRef ref, user) async {
-    if (user?.isPremium != true) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.workspace_premium_rounded, color: Color(0xFFF59E0B)),
-              SizedBox(width: 8),
-              Text(
-                'Fitur Premium',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          content: const Text(
-            'Backup data online hanya tersedia untuk pengguna Premium.\n\n'
-            'Upgrade ke Premium untuk menyimpan data kamu di cloud secara aman.',
-            style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text(
-                'Batal',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                context.push('/premium');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF59E0B),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-              ),
-              child: const Text(
-                'Upgrade Premium',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
+  Future<void> _confirmBackup(BuildContext context, WidgetRef ref) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -615,7 +554,9 @@ class SettingsPage extends ConsumerWidget {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal menghapus akun: $e'),
+            content: Text(
+              'Gagal menghapus akun: ${e.toString().replaceFirst('Exception: ', '')}',
+            ),
             backgroundColor: AppColors.danger,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -1093,8 +1034,8 @@ class SettingsPage extends ConsumerWidget {
           style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600),
         ),
         content: const Text(
-          'Data kamu akan dibackup ke cloud sebelum keluar. '
-          'Pastikan terhubung ke internet.',
+          'Data lokal di HP kamu tetap aman. '
+          'Kamu bisa login kembali kapan saja.',
           style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
         ),
         actions: [
@@ -1130,69 +1071,22 @@ class SettingsPage extends ConsumerWidget {
 
     if (confirm != true || !context.mounted) return;
 
-    // Tampilkan loading — tidak bisa di-dismiss karena sedang backup
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const _LogoutLoadingDialog(),
     );
 
+    // Coba backup diam-diam — gagal pun tetap lanjut logout
     try {
-      await ref.read(authProvider.notifier).signOut();
-      if (context.mounted) {
-        Navigator.of(context).pop(); // tutup loading dialog
-        context.go('/login');
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.of(context).pop(); // tutup loading dialog
-        showDialog(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-            ),
-            title: const Row(
-              children: [
-                Icon(Icons.cloud_off_rounded, color: AppColors.danger),
-                SizedBox(width: 8),
-                Text(
-                  'Backup Gagal',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            content: const Text(
-              'Logout dibatalkan karena backup gagal.\n\n'
-              'Pastikan HP terhubung ke internet lalu coba lagi.',
-              style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                ),
-                child: const Text(
-                  'OK',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }
+      await BackupService().upload();
+    } catch (_) {}
+
+    if (!context.mounted) return;
+    await ref.read(authProvider.notifier).signOut();
+    if (context.mounted) {
+      Navigator.of(context).pop();
+      context.go('/login');
     }
   }
 }
