@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/foundation.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 
 import '../hive/hive_service.dart';
@@ -12,6 +11,8 @@ import '../hive/models/budget_model.dart';
 import '../hive/models/financial_plan_model.dart';
 import '../hive/models/debt_model.dart';
 import '../hive/models/investment_model.dart';
+import '../hive/models/subscription_model.dart';
+import '../hive/models/category_model.dart';
 
 enum ImportMode { replace, merge }
 
@@ -27,6 +28,23 @@ class ImportResult {
   });
 }
 
+/// Hasil dari memilih file backup sebelum proses import dimulai.
+/// Digunakan agar UI bisa menampilkan loading dialog di antara
+/// pemilihan file dan proses import sesungguhnya.
+class PickedBackup {
+  final Map<String, dynamic>? data;
+  final String? errorMessage;
+
+  const PickedBackup._({this.data, this.errorMessage});
+
+  factory PickedBackup.success(Map<String, dynamic> d) =>
+      PickedBackup._(data: d);
+  factory PickedBackup.error(String msg) => PickedBackup._(errorMessage: msg);
+
+  bool get isSuccess => data != null;
+  bool get hasError => errorMessage != null;
+}
+
 class ImportService {
   static final ImportService _instance = ImportService._internal();
   factory ImportService() => _instance;
@@ -37,110 +55,112 @@ class ImportService {
     if (!_isValidBackup(data)) {
       return const ImportResult(
         success: false,
-        message: 'Format backup tidak dikenali',
+        message: 'Format backup tidak dikenali. File mungkin bukan dari Moma.',
       );
     }
     return _importData(data, ImportMode.replace);
   }
 
-  // ── Pick & Import file JSON ───────────────────────────────────
-
-  Future<ImportResult?> pickAndImport({
-    ImportMode mode = ImportMode.merge,
-  }) async {
-    debugPrint('=== pickAndImport called ===');
-    debugPrint('=== Platform.isAndroid: ${Platform.isAndroid} ===');
-    // Request permission dulu
+  // ── Langkah 1: Pilih file & parse ────────────────────────────
+  // Mengembalikan null jika user membatalkan pemilihan file.
+  // Mengembalikan PickedBackup.error() jika ada masalah.
+  // Mengembalikan PickedBackup.success() jika file siap diimport.
+  //
+  // Pisahkan dari importFromMap() agar UI bisa menampilkan
+  // loading dialog di antara pick file dan proses import.
+  Future<PickedBackup?> pickFile() async {
+    // Request permission di Android
     if (Platform.isAndroid) {
-      // Cek versi Android
       final androidInfo = await DeviceInfoPlugin().androidInfo;
       final sdkInt = androidInfo.version.sdkInt;
 
       if (sdkInt < 33) {
-        // Android 12 ke bawah — perlu request permission
         final status = await Permission.storage.request();
         if (!status.isGranted) {
-          if (status.isPermanentlyDenied) await openAppSettings();
-          return const ImportResult(
-            success: false,
-            message: 'Izin akses penyimpanan diperlukan',
+          if (status.isPermanentlyDenied) {
+            await openAppSettings();
+            return PickedBackup.error(
+              'Izin akses file ditolak. Buka Pengaturan HP → Izin Aplikasi → Penyimpanan, lalu aktifkan.',
+            );
+          }
+          return PickedBackup.error(
+            'Izin akses file diperlukan untuk memilih file backup.',
           );
         }
       }
-      debugPrint('=== requesting permission ===');
 
-      // Android 13+ pakai READ_MEDIA_IMAGES, Android 12 kebawah pakai storage
       PermissionStatus status;
-
       if (await Permission.photos.isGranted ||
           await Permission.storage.isGranted ||
           await Permission.manageExternalStorage.isGranted) {
-        // Sudah ada permission, lanjut
         status = PermissionStatus.granted;
       } else {
-        // Coba request satu per satu
         status = await Permission.manageExternalStorage.request();
-        if (!status.isGranted) {
-          status = await Permission.storage.request();
-        }
-        if (!status.isGranted) {
-          status = await Permission.photos.request();
-        }
+        if (!status.isGranted) status = await Permission.storage.request();
+        if (!status.isGranted) status = await Permission.photos.request();
       }
-
-      debugPrint('=== permission status: $status ===');
 
       if (status.isPermanentlyDenied) {
         await openAppSettings();
-        return const ImportResult(
-          success: false,
-          message: 'Buka pengaturan HP untuk mengizinkan akses penyimpanan',
+        return PickedBackup.error(
+          'Izin akses file ditolak. Buka Pengaturan HP → Izin Aplikasi → Penyimpanan, lalu aktifkan.',
         );
       }
-
       if (!status.isGranted) {
-        return const ImportResult(
-          success: false,
-          message: 'Izin akses penyimpanan diperlukan untuk import file',
+        return PickedBackup.error(
+          'Izin akses file diperlukan untuk memilih file backup.',
         );
       }
     }
-    // 1. Pilih file
-    final result = await FilePicker.platform.pickFiles(
+
+    // Buka file picker
+    final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['json'],
       allowMultiple: false,
     );
 
-    if (result == null || result.files.isEmpty) return null;
+    // User membatalkan → kembalikan null (bukan error)
+    if (picked == null || picked.files.isEmpty) return null;
 
-    final file = File(result.files.single.path!);
+    final file = File(picked.files.single.path!);
 
-    // 2. Baca file
-    final content = await file.readAsString(encoding: utf8);
+    // Baca isi file
+    String content;
+    try {
+      content = await file.readAsString(encoding: utf8);
+    } catch (_) {
+      return PickedBackup.error(
+        'Tidak bisa membaca file. Pastikan file tidak rusak dan coba lagi.',
+      );
+    }
 
-    // 3. Parse JSON
+    // Parse JSON
     Map<String, dynamic> data;
     try {
       data = jsonDecode(content) as Map<String, dynamic>;
     } catch (_) {
-      return const ImportResult(
-        success: false,
-        message: 'File tidak valid. Pastikan file adalah backup dari Moma.',
+      return PickedBackup.error(
+        'File tidak bisa dibaca sebagai backup Moma. Pastikan kamu memilih file yang benar.',
       );
     }
 
-    // 4. Validasi struktur
+    // Validasi format backup
     if (!_isValidBackup(data)) {
-      return const ImportResult(
-        success: false,
-        message:
-            'Format file tidak dikenali. Pastikan file adalah backup dari Moma.',
+      return PickedBackup.error(
+        'Format file tidak dikenali. Pastikan file adalah backup yang diekspor dari aplikasi Moma.',
       );
     }
 
-    // 5. Import data
-    return await _importData(data, mode);
+    return PickedBackup.success(data);
+  }
+
+  // ── Langkah 2: Proses import dari data yang sudah dipilih ────
+  Future<ImportResult> importFromMap(
+    Map<String, dynamic> data,
+    ImportMode mode,
+  ) async {
+    return _importData(data, mode);
   }
 
   // ── Validasi backup ───────────────────────────────────────────
@@ -158,7 +178,6 @@ class ImportService {
     ImportMode mode,
   ) async {
     try {
-      // Kalau replace → hapus semua data dulu
       if (mode == ImportMode.replace) {
         await _clearAllData();
       }
@@ -169,6 +188,8 @@ class ImportService {
       int planCount = 0;
       int debtCount = 0;
       int investmentCount = 0;
+      int subscriptionCount = 0;
+      int categoryCount = 0;
 
       // Import wallets
       final wallets = data['wallets'] as List? ?? [];
@@ -185,7 +206,6 @@ class ImportService {
           createdAt: DateTime.tryParse(w['created_at'] ?? '') ?? DateTime.now(),
           updatedAt: DateTime.now(),
         );
-        // Merge: skip kalau sudah ada
         if (mode == ImportMode.merge &&
             HiveService.wallets.containsKey(wallet.id)) continue;
         await HiveService.wallets.put(wallet.id, wallet);
@@ -307,18 +327,63 @@ class ImportService {
       // Import investments
       final investments = data['investments'] as List? ?? [];
       for (final i in investments) {
+        final now = DateTime.now();
         final investment = InvestmentModel(
           id: i['id'],
           name: i['name'],
           type: i['type'],
           currentValue: (i['current_value'] as num).toDouble(),
-          createdAt: DateTime.tryParse(i['created_at'] ?? '') ?? DateTime.now(),
-          updatedAt: DateTime.now(),
+          createdAt: DateTime.tryParse(i['created_at'] ?? '') ?? now,
+          updatedAt: DateTime.tryParse(i['updated_at'] ?? '') ?? now,
         );
         if (mode == ImportMode.merge &&
             HiveService.investments.containsKey(investment.id)) continue;
         await HiveService.investments.put(investment.id, investment);
         investmentCount++;
+      }
+
+      // Import subscriptions
+      final subscriptions = data['subscriptions'] as List? ?? [];
+      for (final s in subscriptions) {
+        final subscription = SubscriptionModel(
+          id: s['id'],
+          name: s['name'],
+          icon: s['icon'] ?? '📱',
+          category: s['category'] ?? '',
+          amount: (s['amount'] as num).toDouble(),
+          cycle: s['cycle'] ?? 'monthly',
+          startDate: DateTime.tryParse(s['start_date'] ?? '') ?? DateTime.now(),
+          nextBillingDate:
+              DateTime.tryParse(s['next_billing_date'] ?? '') ?? DateTime.now(),
+          walletId: s['wallet_id'],
+          walletName: s['wallet_name'],
+          status: s['status'] ?? 'active',
+          note: s['note'],
+          color: s['color'] ?? 0xFF2563EB,
+          createdAt: DateTime.tryParse(s['created_at'] ?? '') ?? DateTime.now(),
+        );
+        if (mode == ImportMode.merge &&
+            HiveService.subscriptions.containsKey(subscription.id)) continue;
+        await HiveService.subscriptions.put(subscription.id, subscription);
+        subscriptionCount++;
+      }
+
+      // Import custom categories (skip default categories)
+      final customCategories = data['custom_categories'] as List? ?? [];
+      for (final c in customCategories) {
+        final category = CategoryModel(
+          id: c['id'],
+          name: c['name'],
+          icon: c['icon'] ?? '📦',
+          color: c['color'] ?? '#2563EB',
+          parentId: c['parent_id'],
+          type: c['type'] ?? 'expense',
+          isDefault: false,
+        );
+        if (mode == ImportMode.merge &&
+            HiveService.categories.containsKey(category.id)) continue;
+        await HiveService.categories.put(category.id, category);
+        categoryCount++;
       }
 
       return ImportResult(
@@ -331,6 +396,8 @@ class ImportService {
           'plans': planCount,
           'debts': debtCount,
           'investments': investmentCount,
+          'subscriptions': subscriptionCount,
+          'categories': categoryCount,
         },
       );
     } catch (e) {
@@ -350,5 +417,12 @@ class ImportService {
     await HiveService.financialPlans.clear();
     await HiveService.debts.clear();
     await HiveService.investments.clear();
+    await HiveService.subscriptions.clear();
+    // Hapus hanya kategori kustom, biarkan kategori default
+    final customKeys = HiveService.categories.values
+        .where((c) => !c.isDefault)
+        .map((c) => c.id)
+        .toList();
+    await HiveService.categories.deleteAll(customKeys);
   }
 }

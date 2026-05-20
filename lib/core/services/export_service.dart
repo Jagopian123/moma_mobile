@@ -37,7 +37,6 @@ class ExportService {
       ..sort((a, b) => b.date.compareTo(a.date));
 
     final rows = <List<dynamic>>[
-      // Header
       [
         'Tanggal',
         'Judul',
@@ -49,7 +48,6 @@ class ExportService {
         'Biaya Admin',
         'Deskripsi',
       ],
-      // Data
       ...transactions.map((tx) => [
             DateFormat('dd/MM/yyyy HH:mm').format(tx.date),
             tx.title,
@@ -106,9 +104,42 @@ class ExportService {
     );
   }
 
+  // ── Export CSV Langganan ──────────────────────────────────────
+
+  Future<void> exportSubscriptionsCsv() async {
+    final subscriptions = HiveService.subscriptions.values.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+
+    final rows = <List<dynamic>>[
+      ['Nama', 'Kategori', 'Jumlah', 'Siklus', 'Tanggal Mulai', 'Tagihan Berikutnya', 'Status', 'Dompet', 'Catatan'],
+      ...subscriptions.map((s) => [
+            s.name,
+            s.category,
+            s.amount,
+            _cycleLabel(s.cycle),
+            DateFormat('dd/MM/yyyy').format(s.startDate),
+            DateFormat('dd/MM/yyyy').format(s.nextBillingDate),
+            _statusLabel(s.status),
+            s.walletName ?? '',
+            s.note ?? '',
+          ]),
+    ];
+
+    final csvStr = const ListToCsvConverter().convert(rows);
+    final file = await _writeFile(
+      name: 'moma_langganan_${_dateStamp()}.csv',
+      content: csvStr,
+    );
+
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      subject: 'Moma - Export Langganan',
+      text: 'Data langganan Moma ${_dateStamp()}',
+    );
+  }
+
   // ── Helpers ───────────────────────────────────────────────────
 
-  // Public static sehingga BackupService bisa memakai tanpa instance
   static Map<String, dynamic> buildBackupMap() {
     return ExportService()._buildExportData();
   }
@@ -120,6 +151,11 @@ class ExportService {
     final plans = HiveService.financialPlans.values.toList();
     final debts = HiveService.debts.values.toList();
     final investments = HiveService.investments.values.toList();
+    final subscriptions = HiveService.subscriptions.values.toList();
+    // Hanya ekspor kategori kustom (bukan default bawaan app)
+    final customCategories = HiveService.categories.values
+        .where((c) => !c.isDefault)
+        .toList();
 
     return {
       'exported_at': DateTime.now().toIso8601String(),
@@ -132,6 +168,7 @@ class ExportService {
                 'amount': tx.amount,
                 'category_id': tx.categoryId,
                 'category_name': tx.categoryName,
+                'category_icon': tx.categoryIcon,
                 'wallet_id': tx.walletId,
                 'wallet_name': tx.walletName,
                 'to_wallet_id': tx.toWalletId,
@@ -152,6 +189,7 @@ class ExportService {
                 'color': w.color,
                 'bank_name': w.bankName,
                 'account_number': w.accountNumber,
+                'created_at': w.createdAt.toIso8601String(),
               })
           .toList(),
       'budgets': budgets
@@ -159,9 +197,12 @@ class ExportService {
                 'id': b.id,
                 'category_id': b.categoryId,
                 'category_name': b.categoryName,
+                'category_icon': b.categoryIcon,
+                'category_color': b.categoryColor,
                 'limit_amount': b.limitAmount,
                 'period': b.period,
                 'start_date': b.startDate.toIso8601String(),
+                'created_at': b.createdAt.toIso8601String(),
               })
           .toList(),
       'financial_plans': plans
@@ -169,6 +210,7 @@ class ExportService {
                 'id': p.id,
                 'name': p.name,
                 'icon': p.icon,
+                'color': p.color,
                 'target_amount': p.targetAmount,
                 'saved_amount': p.savedAmount,
                 'deadline': p.deadline?.toIso8601String(),
@@ -179,6 +221,7 @@ class ExportService {
                           'date': c.date.toIso8601String(),
                         })
                     .toList(),
+                'created_at': p.createdAt.toIso8601String(),
               })
           .toList(),
       'debts': debts
@@ -188,6 +231,10 @@ class ExportService {
                 'person_name': d.personName,
                 'total_amount': d.totalAmount,
                 'remaining_amount': d.remainingAmount,
+                'wallet_id': d.walletId,
+                'wallet_name': d.walletName,
+                'category_id': d.categoryId,
+                'category_name': d.categoryName,
                 'status': d.status,
                 'note': d.note,
                 'deadline': d.deadline?.toIso8601String(),
@@ -199,6 +246,7 @@ class ExportService {
                           'note': p.note,
                         })
                     .toList(),
+                'created_at': d.createdAt.toIso8601String(),
               })
           .toList(),
       'investments': investments
@@ -207,6 +255,36 @@ class ExportService {
                 'name': i.name,
                 'type': i.type,
                 'current_value': i.currentValue,
+                'created_at': i.createdAt.toIso8601String(),
+                'updated_at': i.updatedAt.toIso8601String(),
+              })
+          .toList(),
+      'subscriptions': subscriptions
+          .map((s) => {
+                'id': s.id,
+                'name': s.name,
+                'icon': s.icon,
+                'category': s.category,
+                'amount': s.amount,
+                'cycle': s.cycle,
+                'start_date': s.startDate.toIso8601String(),
+                'next_billing_date': s.nextBillingDate.toIso8601String(),
+                'wallet_id': s.walletId,
+                'wallet_name': s.walletName,
+                'status': s.status,
+                'note': s.note,
+                'color': s.color,
+                'created_at': s.createdAt.toIso8601String(),
+              })
+          .toList(),
+      'custom_categories': customCategories
+          .map((c) => {
+                'id': c.id,
+                'name': c.name,
+                'icon': c.icon,
+                'color': c.color,
+                'parent_id': c.parentId,
+                'type': c.type,
               })
           .toList(),
     };
@@ -264,6 +342,32 @@ class ExportService {
         return 'Kripto';
       default:
         return type;
+    }
+  }
+
+  String _cycleLabel(String cycle) {
+    switch (cycle) {
+      case 'weekly':
+        return 'Mingguan';
+      case 'monthly':
+        return 'Bulanan';
+      case 'yearly':
+        return 'Tahunan';
+      default:
+        return cycle;
+    }
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'active':
+        return 'Aktif';
+      case 'paused':
+        return 'Dijeda';
+      case 'cancelled':
+        return 'Dibatalkan';
+      default:
+        return status;
     }
   }
 }

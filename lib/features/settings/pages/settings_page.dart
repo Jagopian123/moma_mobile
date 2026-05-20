@@ -17,6 +17,7 @@ import '../../transaction/providers/transaction_provider.dart';
 import '../../budget/providers/budget_provider.dart';
 import '../../financial_plan/providers/financial_plan_provider.dart';
 import '../../debt/providers/debt_provider.dart';
+import '../../subscription/providers/subscription_provider.dart';
 import '../../../shared/providers/app_info_provider.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -413,6 +414,8 @@ class SettingsPage extends ConsumerWidget {
               'Rencana finansial',
               'Hutang & piutang',
               'Investasi',
+              'Langganan',
+              'Kategori kustom',
             ].map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
@@ -686,18 +689,12 @@ class SettingsPage extends ConsumerWidget {
                   label: 'Backup Semua Data (JSON)',
                   description:
                       'Semua data termasuk transaksi, aset, budget, dll',
-                  onTap: () async {
-                    Navigator.pop(sheetContext);
-                    try {
-                      await ExportService().exportJson();
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Gagal ekspor: $e')),
-                        );
-                      }
-                    }
-                  },
+                  onTap: () => _runExport(
+                    context,
+                    sheetContext,
+                    label: 'backup',
+                    action: () => ExportService().exportJson(),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
 
@@ -707,18 +704,12 @@ class SettingsPage extends ConsumerWidget {
                   iconColor: const Color(0xFF10B981),
                   label: 'Ekspor Transaksi (CSV)',
                   description: 'Data transaksi dalam format spreadsheet',
-                  onTap: () async {
-                    Navigator.pop(sheetContext);
-                    try {
-                      await ExportService().exportTransactionsCsv();
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Gagal ekspor: $e')),
-                        );
-                      }
-                    }
-                  },
+                  onTap: () => _runExport(
+                    context,
+                    sheetContext,
+                    label: 'transaksi',
+                    action: () => ExportService().exportTransactionsCsv(),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
 
@@ -728,18 +719,27 @@ class SettingsPage extends ConsumerWidget {
                   iconColor: const Color(0xFFF59E0B),
                   label: 'Ekspor Aset (CSV)',
                   description: 'Data dompet dan investasi',
-                  onTap: () async {
-                    Navigator.pop(sheetContext);
-                    try {
-                      await ExportService().exportAssetsCsv();
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Gagal ekspor: $e')),
-                        );
-                      }
-                    }
-                  },
+                  onTap: () => _runExport(
+                    context,
+                    sheetContext,
+                    label: 'aset',
+                    action: () => ExportService().exportAssetsCsv(),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+
+                // Export CSV Langganan
+                _ExportOption(
+                  icon: Icons.subscriptions_rounded,
+                  iconColor: const Color(0xFF8B5CF6),
+                  label: 'Ekspor Langganan (CSV)',
+                  description: 'Data semua langganan aktif & non-aktif',
+                  onTap: () => _runExport(
+                    context,
+                    sheetContext,
+                    label: 'langganan',
+                    action: () => ExportService().exportSubscriptionsCsv(),
+                  ),
                 ),
               ],
             ),
@@ -827,149 +827,233 @@ class SettingsPage extends ConsumerWidget {
     );
   }
 
-  // ── Do Import ─────────────────────────────────────────────────
+  // ── Run Export ────────────────────────────────────────────────
 
-  Future<void> _doImport(
-      BuildContext context, WidgetRef ref, ImportMode mode) async {
-    try {
-      final result = await ImportService().pickAndImport(mode: mode);
+  Future<void> _runExport(
+    BuildContext context,
+    BuildContext sheetContext, {
+    required String label,
+    required Future<void> Function() action,
+  }) async {
+    Navigator.pop(sheetContext);
 
-      if (result == null) return;
-
-      if (!context.mounted) return;
-
-      // Refresh semua provider supaya UI update tanpa restart
-      if (result.success) {
-        ref.invalidate(walletProvider);
-        ref.invalidate(transactionProvider);
-        ref.invalidate(budgetProvider);
-        ref.invalidate(financialPlanProvider);
-        ref.invalidate(debtProvider);
-        ref.invalidate(investmentProvider);
-      }
-
-      showDialog(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-          ),
-          title: Row(
-            children: [
-              Icon(
-                result.success
-                    ? Icons.check_circle_rounded
-                    : Icons.error_rounded,
-                color: result.success ? AppColors.safe : AppColors.danger,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                result.success ? 'Berhasil' : 'Gagal',
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          content: result.success
-              ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Data berhasil diimport:',
-                      style: TextStyle(fontFamily: 'Poppins'),
-                    ),
-                    const SizedBox(height: 8),
-                    ...result.counts.entries
-                        .where((e) => e.value > 0)
-                        .map((e) => Text(
-                              '• ${_countLabel(e.key)}: ${e.value}',
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 13,
-                              ),
-                            )),
-                  ],
-                )
-              : Text(
-                  result.message,
-                  style: const TextStyle(fontFamily: 'Poppins'),
-                ),
-          actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-              ),
-              child: const Text(
-                'OK',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
               ),
             ),
+            const SizedBox(width: 12),
+            Text('Menyiapkan ekspor $label...'),
           ],
         ),
-      );
-    } catch (e, stack) {
-      debugPrint('Import error: $e');
-      debugPrint('Stack: $stack');
+        duration: const Duration(seconds: 30),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+      ),
+    );
+
+    try {
+      await action();
       if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengekspor $label. Coba lagi.'),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            title: const Row(
-              children: [
-                Icon(Icons.error_rounded, color: AppColors.danger),
-                SizedBox(width: 8),
-                Text(
-                  'Error',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            content: Text(
-              e.toString(),
-              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                ),
-                child: const Text(
-                  'OK',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
           ),
         );
       }
     }
+  }
+
+  // ── Do Import ─────────────────────────────────────────────────
+
+  Future<void> _doImport(
+      BuildContext context, WidgetRef ref, ImportMode mode) async {
+    // Langkah 1: Pilih file
+    final picked = await ImportService().pickFile();
+
+    // User membatalkan pemilihan file
+    if (picked == null) return;
+
+    // Ada error saat memilih / membaca / mem-parse file
+    if (picked.hasError) {
+      if (!context.mounted) return;
+      _showImportResultDialog(
+        context,
+        success: false,
+        message: picked.errorMessage!,
+        counts: const {},
+      );
+      return;
+    }
+
+    // File siap — tampilkan loading dialog lalu proses import
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(AppColors.primary),
+                strokeWidth: 3,
+              ),
+              SizedBox(height: AppSpacing.lg),
+              Text(
+                'Mengimport data...',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Langkah 2: Proses import
+    ImportResult result;
+    try {
+      result = await ImportService().importFromMap(picked.data!, mode);
+    } catch (e) {
+      if (context.mounted) Navigator.of(context).pop();
+      if (context.mounted) {
+        _showImportResultDialog(
+          context,
+          success: false,
+          message: 'Terjadi kesalahan saat mengimport data. Coba lagi.',
+          counts: const {},
+        );
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+    Navigator.of(context).pop(); // tutup loading dialog
+
+    // Refresh semua provider supaya UI update tanpa restart
+    if (result.success) {
+      ref.invalidate(walletProvider);
+      ref.invalidate(transactionProvider);
+      ref.invalidate(budgetProvider);
+      ref.invalidate(financialPlanProvider);
+      ref.invalidate(debtProvider);
+      ref.invalidate(investmentProvider);
+      ref.invalidate(subscriptionProvider);
+    }
+
+    _showImportResultDialog(
+      context,
+      success: result.success,
+      message: result.message,
+      counts: result.counts,
+    );
+  }
+
+  void _showImportResultDialog(
+    BuildContext context, {
+    required bool success,
+    required String message,
+    required Map<String, int> counts,
+  }) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              success ? Icons.check_circle_rounded : Icons.error_rounded,
+              color: success ? AppColors.safe : AppColors.danger,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              success ? 'Berhasil' : 'Gagal',
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: success
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Data berhasil diimport:',
+                    style: TextStyle(fontFamily: 'Poppins'),
+                  ),
+                  const SizedBox(height: 8),
+                  ...counts.entries
+                      .where((e) => e.value > 0)
+                      .map((e) => Text(
+                            '• ${_countLabel(e.key)}: ${e.value}',
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 13,
+                            ),
+                          )),
+                ],
+              )
+            : Text(
+                message,
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
+              ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+            ),
+            child: const Text(
+              'OK',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _countLabel(String key) {
@@ -986,6 +1070,10 @@ class SettingsPage extends ConsumerWidget {
         return 'Hutang & Piutang';
       case 'investments':
         return 'Investasi';
+      case 'subscriptions':
+        return 'Langganan';
+      case 'categories':
+        return 'Kategori Kustom';
       default:
         return key;
     }
