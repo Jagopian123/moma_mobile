@@ -130,15 +130,13 @@ class _SplashPageState extends ConsumerState<SplashPage>
                               ),
                             ],
                           ),
-                          child: const Center(
-                            child: Text(
-                              'M',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 48,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
-                              ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Image.asset(
+                              'assets/images/logo-app-moma.png',
+                              width: 90,
+                              height: 90,
+                              fit: BoxFit.contain,
                             ),
                           ),
                         ),

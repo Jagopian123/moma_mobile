@@ -107,7 +107,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final idToken = googleAuth.idToken;
 
       if (idToken == null) {
-        state = const AuthState.error('Gagal mendapatkan token Google');
+        state = const AuthState.error('Login dengan Google gagal. Coba lagi.');
         return;
       }
 
@@ -137,15 +137,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
           e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.connectionError) {
         state = const AuthState.error(
-          'Tidak dapat terhubung ke server.\nPastikan HP dan laptop terhubung ke WiFi yang sama.',
+          'Tidak bisa terhubung ke internet. Periksa koneksi kamu lalu coba lagi.',
         );
       } else {
-        final message =
-            e.response?.data?['message'] ?? 'Koneksi ke server gagal';
+        final message = e.response?.data?['message'] ?? 'Terjadi kesalahan. Coba lagi.';
         state = AuthState.error(message);
       }
-    } catch (e) {
-      state = AuthState.error('Terjadi kesalahan: $e');
+    } catch (_) {
+      state = const AuthState.error('Terjadi kesalahan. Coba lagi.');
     }
   }
 

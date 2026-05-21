@@ -77,10 +77,10 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon/app_icon.png"
+  image_path: "assets/icon/logo-app-moma.png"
   min_sdk_android: 21
   adaptive_icon_background: "#2563EB"
-  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  adaptive_icon_foreground: "assets/icon/logo-app-moma.png"
   web:
     generate: false
 
@@ -90,6 +90,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/icon/
     - assets/lottie/
     - env/.env.development
     - env/.env.staging
