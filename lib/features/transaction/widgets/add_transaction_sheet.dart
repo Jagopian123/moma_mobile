@@ -175,6 +175,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
                     ),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
                     ),

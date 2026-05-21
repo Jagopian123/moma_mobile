@@ -19,110 +19,115 @@ class MainScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentIndex = _currentIndex(context);
+    // Tombol + diposisikan tepat di atas nav bar dari level Stack terluar
+    // agar hit test mencakup seluruh area tombol (termasuk bagian yang menonjol ke atas).
+    // Rumus: bottom = safe-area + tinggi konten nav bar (66px) - setengah tombol (28px) = +38
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    return Scaffold(
-      body: child,
-      // AI Catat FAB — lives in Scaffold's overlay layer so modal barriers cover it
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'ai_chat_fab',
-        onPressed: () => context.push('/ai-chat'),
-        backgroundColor: const Color(0xFF2563EB),
-        foregroundColor: Colors.white,
-        elevation: 3,
-        icon: const Icon(Icons.auto_awesome_rounded, size: 20),
-        label: const Text(
-          'Moma AI',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: _buildBottomNav(context, currentIndex),
-    );
-  }
-
-  Widget _buildBottomNav(BuildContext context, int currentIndex) {
     return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.topCenter,
       children: [
-        // Nav bar background
-        Container(
-          decoration: const BoxDecoration(
-            color: AppColors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x0F000000),
-                blurRadius: 20,
-                offset: Offset(0, -4),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _NavItem(
-                    icon: Icons.home_rounded,
-                    label: 'Home',
-                    isSelected: currentIndex == 0,
-                    onTap: () => context.go('/home'),
-                  ),
-                  _NavItem(
-                    icon: Icons.receipt_long_rounded,
-                    label: 'Transaksi',
-                    isSelected: currentIndex == 1,
-                    onTap: () => context.go('/transaction'),
-                  ),
-                  // Spacer for the floating + button
-                  const SizedBox(width: 56),
-                  _NavItem(
-                    icon: Icons.account_balance_wallet_rounded,
-                    label: 'Aset',
-                    isSelected: currentIndex == 3,
-                    onTap: () => context.go('/asset'),
-                  ),
-                  _NavItem(
-                    icon: Icons.settings_rounded,
-                    label: 'Pengaturan',
-                    isSelected: currentIndex == 4,
-                    onTap: () => context.go('/settings'),
-                  ),
-                ],
+        Scaffold(
+          body: child,
+          floatingActionButton: FloatingActionButton.extended(
+            heroTag: 'ai_chat_fab',
+            onPressed: () => context.push('/ai-chat'),
+            backgroundColor: const Color(0xFF2563EB),
+            foregroundColor: Colors.white,
+            elevation: 3,
+            icon: const Icon(Icons.auto_awesome_rounded, size: 20),
+            label: const Text(
+              'Moma AI',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+          bottomNavigationBar: _buildBottomNav(context, currentIndex),
         ),
-        // Floating + button above the nav bar
         Positioned(
-          top: -26,
-          child: GestureDetector(
-            onTap: () => _showAddTransaction(context),
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: const BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x402563EB),
-                    blurRadius: 14,
-                    offset: Offset(0, 4),
-                  ),
-                ],
+          bottom: bottomPadding + 38,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: GestureDetector(
+              onTap: () => _showAddTransaction(context),
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x402563EB),
+                      blurRadius: 14,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
-              child:
-                  const Icon(Icons.add_rounded, color: Colors.white, size: 28),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBottomNav(BuildContext context, int currentIndex) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 20,
+            offset: Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(
+                icon: Icons.home_rounded,
+                label: 'Home',
+                isSelected: currentIndex == 0,
+                onTap: () => context.go('/home'),
+              ),
+              _NavItem(
+                icon: Icons.receipt_long_rounded,
+                label: 'Transaksi',
+                isSelected: currentIndex == 1,
+                onTap: () => context.go('/transaction'),
+              ),
+              const SizedBox(width: 56),
+              _NavItem(
+                icon: Icons.account_balance_wallet_rounded,
+                label: 'Aset',
+                isSelected: currentIndex == 3,
+                onTap: () => context.go('/asset'),
+              ),
+              _NavItem(
+                icon: Icons.settings_rounded,
+                label: 'Pengaturan',
+                isSelected: currentIndex == 4,
+                onTap: () => context.go('/settings'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
