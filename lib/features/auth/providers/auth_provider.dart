@@ -216,6 +216,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _ref.invalidate(backupProvider);
   }
 
+  Future<void> updateName(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) throw Exception('Nama tidak boleh kosong');
+
+    final response = await _api.put('/user', data: {'name': trimmed});
+
+    if (response.statusCode == 200 && response.data['success'] == true) {
+      final current = state.user!;
+      updateUser(UserModel(
+        id: current.id,
+        name: trimmed,
+        email: current.email,
+        avatar: current.avatar,
+        isPremium: current.isPremium,
+        currency: current.currency,
+        locale: current.locale,
+      ));
+    } else {
+      throw Exception(
+        response.data['message'] ?? 'Gagal memperbarui nama',
+      );
+    }
+  }
+
   void updateUser(UserModel user) {
     _saveUserToHive(user);
     state = AuthState.authenticated(user);

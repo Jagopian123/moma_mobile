@@ -92,6 +92,7 @@ class ProfilePage extends ConsumerWidget {
                         icon: Icons.person_rounded,
                         label: 'Nama',
                         value: user.name,
+                        onTap: () => _editName(context, ref, user.name),
                       ),
                       _InfoRow(
                         icon: Icons.email_rounded,
@@ -154,6 +155,111 @@ class ProfilePage extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _editName(BuildContext context, WidgetRef ref, String currentName) {
+    final controller = TextEditingController(text: currentName);
+    String? errorText;
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          title: const Text(
+            'Ubah Nama',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            maxLength: 50,
+            decoration: InputDecoration(
+              hintText: 'Nama kamu',
+              errorText: errorText,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+            ),
+            style: const TextStyle(fontFamily: 'Poppins'),
+            onChanged: (_) {
+              if (errorText != null) setState(() => errorText = null);
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(dialogContext),
+              child: const Text(
+                'Batal',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final name = controller.text.trim();
+                      if (name.isEmpty) {
+                        setState(() => errorText = 'Nama tidak boleh kosong');
+                        return;
+                      }
+                      if (name == currentName) {
+                        Navigator.pop(dialogContext);
+                        return;
+                      }
+                      setState(() => isLoading = true);
+                      try {
+                        await ref
+                            .read(authProvider.notifier)
+                            .updateName(name);
+                      } catch (_) {}
+                      if (dialogContext.mounted) {
+                        Navigator.pop(dialogContext);
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+              ),
+              child: isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Simpan',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -345,6 +451,7 @@ class _InfoRow extends StatelessWidget {
   final String value;
   final Color? valueColor;
   final bool isLast;
+  final VoidCallback? onTap;
 
   const _InfoRow({
     required this.icon,
@@ -352,48 +459,64 @@ class _InfoRow extends StatelessWidget {
     required this.value,
     this.valueColor,
     this.isLast = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: 14,
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha:0.08),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
+        InkWell(
+          onTap: onTap,
+          borderRadius: isLast
+              ? const BorderRadius.vertical(
+                  bottom: Radius.circular(AppRadius.lg))
+              : BorderRadius.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 14,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Icon(icon, size: 18, color: AppColors.primary),
                 ),
-                child: Icon(icon, size: 18, color: AppColors.primary),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
+                const SizedBox(width: 12),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              Text(
-                value,
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: valueColor ?? AppColors.textPrimary,
+                const Spacer(),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: valueColor ?? AppColors.textPrimary,
+                  ),
                 ),
-              ),
-            ],
+                if (onTap != null) ...[
+                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.edit_rounded,
+                    size: 14,
+                    color: AppColors.textHint,
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
         if (!isLast)
