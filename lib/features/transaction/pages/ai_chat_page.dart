@@ -529,6 +529,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                           controller: _textController,
                           enabled: !isLoading,
                           maxLines: null,
+                          maxLength: 200,
                           textInputAction: TextInputAction.send,
                           onSubmitted: (_) => _send(),
                           style: const TextStyle(
