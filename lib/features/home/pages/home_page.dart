@@ -18,6 +18,7 @@ import '../../debt/providers/debt_provider.dart';
 import '../../transaction/widgets/transaction_card.dart';
 import '../providers/home_provider.dart';
 import '../../insights/providers/analytics_provider.dart';
+import '../../insights/models/analytics_data.dart';
 import '../../notifications/providers/notification_provider.dart';
 
 class HomePage extends ConsumerWidget {
@@ -231,14 +232,36 @@ class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
   int _currentPage = 0;
   Timer? _timer;
 
+  static final _emptyInsights = [
+    InsightItem(
+      emoji: '💰',
+      title: 'Catat transaksi pertamamu',
+      body: 'Tap tombol + atau gunakan AI Chat untuk mulai mencatat keuanganmu.',
+      type: InsightType.neutral,
+    ),
+    InsightItem(
+      emoji: '🤖',
+      title: 'AI siap membantumu',
+      body: 'Ketik seperti "makan siang 30k cash" dan AI langsung parse jadi transaksi.',
+      type: InsightType.neutral,
+    ),
+    InsightItem(
+      emoji: '🎯',
+      title: 'Rencanakan budgetmu',
+      body: 'Buat anggaran per kategori biar pengeluaranmu selalu terkontrol setiap bulan.',
+      type: InsightType.neutral,
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
     _timer = Timer.periodic(const Duration(seconds: 5), (_) {
       final insights = ref.read(homeInsightsProvider);
-      if (insights.length > 1 && _pageController.hasClients) {
-        final next = (_currentPage + 1) % insights.length;
+      final display = insights.isEmpty ? _emptyInsights : insights;
+      if (display.length > 1 && _pageController.hasClients) {
+        final next = (_currentPage + 1) % display.length;
         _pageController.animateToPage(
           next,
           duration: const Duration(milliseconds: 400),
@@ -259,7 +282,7 @@ class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
   Widget build(BuildContext context) {
     final insights = ref.watch(homeInsightsProvider);
     final isPro = ref.watch(authProvider).user?.isPremium == true;
-    if (insights.isEmpty) return const SizedBox.shrink();
+    final display = insights.isEmpty ? _emptyInsights : insights;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -305,11 +328,11 @@ class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
                     height: 54,
                     child: PageView.builder(
                       controller: _pageController,
-                      itemCount: insights.length,
+                      itemCount: display.length,
                       onPageChanged: (i) =>
                           setState(() => _currentPage = i),
                       itemBuilder: (_, i) {
-                        final insight = insights[i];
+                        final insight = display[i];
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -343,11 +366,11 @@ class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
                   ),
 
                   // Dot indicators
-                  if (insights.length > 1) ...[
+                  if (display.length > 1) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: List.generate(
-                        insights.length.clamp(0, 8),
+                        display.length.clamp(0, 8),
                         (i) => AnimatedContainer(
                           duration: const Duration(milliseconds: 300),
                           width: i == _currentPage ? 14 : 5,
