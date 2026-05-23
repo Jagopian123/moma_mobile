@@ -52,13 +52,8 @@ void main() async {
   // Init API service (Dio + interceptor)
   ApiService().init();
 
-  // Init notification service dan jadwalkan reminders
+  // Init notification plugin (wajib sebelum runApp)
   await NotificationService.init();
-  await Future.wait([
-    NotificationService.scheduleDailyReminder(),
-    NotificationService.scheduleSubscriptionReminders(),
-    NotificationService.scheduleDebtReminders(),
-  ]);
 
   runApp(
     const ProviderScope(
@@ -81,6 +76,7 @@ class _MomaAppState extends ConsumerState<MomaApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(notificationProvider.notifier).generateAll();
+      _scheduleNotifications();
     });
   }
 
@@ -98,6 +94,12 @@ class _MomaAppState extends ConsumerState<MomaApp> with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.resumed) {
       _tryAutoBackup();
     }
+  }
+
+  void _scheduleNotifications() {
+    NotificationService.scheduleDailyReminder();
+    NotificationService.scheduleSubscriptionReminders();
+    NotificationService.scheduleDebtReminders();
   }
 
   void _tryAutoBackup() {
