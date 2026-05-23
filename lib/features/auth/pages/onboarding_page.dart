@@ -12,36 +12,59 @@ class OnboardingPage extends ConsumerStatefulWidget {
   ConsumerState<OnboardingPage> createState() => _OnboardingPageState();
 }
 
-class _OnboardingPageState extends ConsumerState<OnboardingPage> {
+class _OnboardingPageState extends ConsumerState<OnboardingPage>
+    with SingleTickerProviderStateMixin {
   final _pageController = PageController();
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnim;
   int _currentPage = 0;
 
-  final List<_OnboardingData> _pages = const [
+  static const _pages = [
     _OnboardingData(
-      emoji: '💰',
+      imagePath: 'assets/images/onboarding1.png',
       title: 'Catat Keuanganmu\ndengan Mudah',
       description:
           'Pantau pemasukan dan pengeluaran harian kamu dalam satu aplikasi yang simpel dan intuitif.',
-      color: Color(0xFF2563EB),
-      bgColor: Color(0xFFEFF6FF),
+      startColor: Color(0xFF1D4ED8),
+      endColor: Color(0xFF3B82F6),
+      accentColor: Color(0xFF2563EB),
     ),
     _OnboardingData(
-      emoji: '📊',
+      imagePath: 'assets/images/onboarding2.png',
       title: 'Kelola Budget\nLebih Cerdas',
       description:
           'Buat anggaran per kategori dan pantau pengeluaranmu agar selalu sesuai rencana.',
-      color: Color(0xFF7C3AED),
-      bgColor: Color(0xFFF5F3FF),
+      startColor: Color(0xFF5B21B6),
+      endColor: Color(0xFF8B5CF6),
+      accentColor: Color(0xFF7C3AED),
     ),
     _OnboardingData(
-      emoji: '🎯',
+      imagePath: 'assets/images/onboarding3.png',
       title: 'Wujudkan Tujuan\nKeuanganmu',
       description:
           'Tetapkan target tabungan dan lihat perkembanganmu menuju kebebasan finansial.',
-      color: Color(0xFF059669),
-      bgColor: Color(0xFFECFDF5),
+      startColor: Color(0xFF047857),
+      endColor: Color(0xFF10B981),
+      accentColor: Color(0xFF059669),
     ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _fadeAnim = CurvedAnimation(parent: _fadeController, curve: Curves.easeIn);
+    _fadeController.forward();
+  }
+
+  void _onPageChanged(int index) {
+    setState(() => _currentPage = index);
+    _fadeController.reset();
+    _fadeController.forward();
+  }
 
   void _nextPage() {
     if (_currentPage < _pages.length - 1) {
@@ -62,163 +85,223 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   @override
   void dispose() {
     _pageController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final current = _pages[_currentPage];
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      backgroundColor: current.bgColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Skip button
-            Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: TextButton(
-                  onPressed: _finish,
-                  child: Text(
-                    'Lewati',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      color: current.color.withOpacity(0.7),
+      body: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [current.startColor, current.endColor],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // Top bar: logo + nama app + tombol lewati
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.asset(
+                          'assets/images/logo-app-moma.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Moma',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: _finish,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                      ),
+                      child: const Text(
+                        'Lewati',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Illustration PageView
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: _onPageChanged,
+                  itemCount: _pages.length,
+                  itemBuilder: (_, i) => _IllustrationSlide(data: _pages[i]),
+                ),
+              ),
+
+              // Bottom white card
+              Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(36),
+                    topRight: Radius.circular(36),
+                  ),
+                ),
+                padding: EdgeInsets.fromLTRB(28, 32, 28, 24 + bottomPadding),
+                child: FadeTransition(
+                  opacity: _fadeAnim,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        current.title,
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: current.accentColor,
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        current.description,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                          height: 1.6,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // Dots + Button
+                      Row(
+                        children: [
+                          Row(
+                            children: List.generate(
+                              _pages.length,
+                              (i) => AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                margin: const EdgeInsets.only(right: 8),
+                                width: _currentPage == i ? 24 : 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: _currentPage == i
+                                      ? current.accentColor
+                                      : current.accentColor.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          ElevatedButton(
+                            onPressed: _nextPage,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: current.accentColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 28, vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              _currentPage == _pages.length - 1
+                                  ? 'Mulai'
+                                  : 'Lanjut →',
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
-
-            // Pages
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (i) => setState(() => _currentPage = i),
-                itemCount: _pages.length,
-                itemBuilder: (_, i) => _OnboardingSlide(data: _pages[i]),
-              ),
-            ),
-
-            // Bottom area
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                children: [
-                  // Dots indicator
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      _pages.length,
-                      (i) => AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: _currentPage == i ? 24 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: _currentPage == i
-                              ? current.color
-                              : current.color.withOpacity(0.25),
-                          borderRadius: BorderRadius.circular(AppRadius.full),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // Next / Mulai button
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _nextPage,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: current.color,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        _currentPage == _pages.length - 1
-                            ? 'Mulai Sekarang'
-                            : 'Selanjutnya',
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _OnboardingSlide extends StatelessWidget {
+class _IllustrationSlide extends StatelessWidget {
   final _OnboardingData data;
-  const _OnboardingSlide({required this.data});
+  const _IllustrationSlide({required this.data});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return Center(
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          // Illustration emoji
+          // Outer glow ring
           Container(
-            width: 180,
-            height: 180,
+            width: 290,
+            height: 290,
             decoration: BoxDecoration(
-              color: data.color.withOpacity(0.12),
               shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                data.emoji,
-                style: const TextStyle(fontSize: 80),
-              ),
+              color: Colors.white.withOpacity(0.08),
             ),
           ),
-          const SizedBox(height: AppSpacing.xl),
-
-          // Title
-          Text(
-            data.title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              color: data.color,
-              height: 1.3,
+          // Inner ring
+          Container(
+            width: 230,
+            height: 230,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.13),
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Description
-          Text(
-            data.description,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 15,
-              fontWeight: FontWeight.w400,
-              color: AppColors.textSecondary,
-              height: 1.6,
-            ),
+          // Image
+          Image.asset(
+            data.imagePath,
+            width: 230,
+            height: 230,
+            fit: BoxFit.contain,
           ),
         ],
       ),
@@ -227,17 +310,19 @@ class _OnboardingSlide extends StatelessWidget {
 }
 
 class _OnboardingData {
-  final String emoji;
+  final String imagePath;
   final String title;
   final String description;
-  final Color color;
-  final Color bgColor;
+  final Color startColor;
+  final Color endColor;
+  final Color accentColor;
 
   const _OnboardingData({
-    required this.emoji,
+    required this.imagePath,
     required this.title,
     required this.description,
-    required this.color,
-    required this.bgColor,
+    required this.startColor,
+    required this.endColor,
+    required this.accentColor,
   });
 }
