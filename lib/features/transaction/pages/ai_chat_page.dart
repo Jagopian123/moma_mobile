@@ -39,16 +39,38 @@ class AiChatPage extends ConsumerStatefulWidget {
 class _AiChatPageState extends ConsumerState<AiChatPage> {
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
+  bool _limitWarningShown = false;
 
   @override
   void initState() {
     super.initState();
+    _textController.addListener(_onTextChanged);
     // Scroll to bottom for already-loaded history when page reopens
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
 
+  void _onTextChanged() {
+    if (_textController.text.length >= 200 && !_limitWarningShown) {
+      _limitWarningShown = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Maksimal 200 karakter',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.textSecondary,
+        ),
+      );
+    } else if (_textController.text.length < 200) {
+      _limitWarningShown = false;
+    }
+  }
+
   @override
   void dispose() {
+    _textController.removeListener(_onTextChanged);
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -538,6 +560,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                             color: AppColors.textPrimary,
                           ),
                           decoration: InputDecoration(
+                            counterText: '',
                             hintText: isListening
                                 ? 'Mendengarkan...'
                                 : 'Ketik atau tahan mic...',
