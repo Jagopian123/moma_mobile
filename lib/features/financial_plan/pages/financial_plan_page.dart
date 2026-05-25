@@ -13,6 +13,7 @@ import '../widgets/financial_plan_form_sheet.dart';
 import '../widgets/contribution_sheet.dart';
 import '../../../shared/providers/plan_limits_provider.dart';
 import '../../../shared/widgets/plan_limit_sheet.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
 
 class FinancialPlanPage extends ConsumerWidget {
   const FinancialPlanPage({super.key});
@@ -86,17 +87,22 @@ class FinancialPlanPage extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.lg),
 
                 // ── Card per Target ────────────────────────────
-                ...plans.map((plan) => Padding(
+                ...List.generate(plans.length, (i) {
+                  return [
+                    Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.md),
                       child: _PlanCard(
-                        plan: plan,
+                        plan: plans[i],
                         notifier: notifier,
-                        onEdit: () => _showForm(context, plan),
-                        onDelete: () => _confirmDelete(context, ref, plan),
+                        onEdit: () => _showForm(context, plans[i]),
+                        onDelete: () => _confirmDelete(context, ref, plans[i]),
                         onAddContribution: () =>
-                            _showContribution(context, plan),
+                            _showContribution(context, plans[i]),
                       ),
-                    )),
+                    ),
+                    if (i == 1) const NativeAdWidget(),
+                  ];
+                }).expand((w) => w),
               ],
             ),
     );

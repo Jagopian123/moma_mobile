@@ -7,7 +7,8 @@ import '../hive/models/budget_model.dart';
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
-  static bool _initialized = false;
+  static bool _pluginInitialized = false;
+  static bool _timezonesInitialized = false;
 
   static const _channelId = 'moma_channel';
   static const _channelName = 'Moma Notifikasi';
@@ -18,11 +19,9 @@ class NotificationService {
   // 3000-3999 : Debt reminder
   // 9000      : Daily reminder
 
-  static Future<void> init() async {
-    if (_initialized) return;
-
-    tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+  // Dipanggil sebelum runApp — hanya inisialisasi plugin, tanpa timezone DB
+  static Future<void> initPlugin() async {
+    if (_pluginInitialized) return;
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
@@ -48,7 +47,15 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
 
-    _initialized = true;
+    _pluginInitialized = true;
+  }
+
+  // Dipanggil post-frame — load timezone DB (~200-500ms) di luar critical path
+  static void initTimezones() {
+    if (_timezonesInitialized) return;
+    tz.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+    _timezonesInitialized = true;
   }
 
   static AndroidNotificationDetails get _androidDetails =>

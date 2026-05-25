@@ -6,8 +6,10 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/hive/hive_service.dart';
 import 'core/hive/category_seeder.dart';
+import 'core/services/ad_eligibility_service.dart';
 import 'core/router/app_router.dart';
 import 'core/services/api_service.dart';
+import 'core/services/admob_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/providers/auth_provider.dart';
@@ -48,12 +50,13 @@ void main() async {
   await HiveService.init();
   await CategorySeeder.seed();
   await CategorySeeder.ensureSubscriptionCategory();
+  AdEligibilityService.recordInstallIfNeeded();
 
   // Init API service (Dio + interceptor)
   ApiService().init();
 
-  // Init notification plugin (wajib sebelum runApp)
-  await NotificationService.init();
+  // Init notification plugin — tanpa timezone DB agar tidak memblokir runApp
+  await NotificationService.initPlugin();
 
   runApp(
     const ProviderScope(
@@ -74,9 +77,15 @@ class _MomaAppState extends ConsumerState<MomaApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Buka box debt & investment di background setelah frame pertama
+      await HiveService.initLazy();
+      // Load timezone DB setelah runApp — hemat ~200-500ms di startup
+      NotificationService.initTimezones();
       ref.read(notificationProvider.notifier).generateAll();
       _scheduleNotifications();
+      // Init AdMob di background — tidak perlu await
+      AdmobService.init();
     });
   }
 

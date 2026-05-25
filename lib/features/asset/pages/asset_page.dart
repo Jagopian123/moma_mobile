@@ -14,6 +14,7 @@ import '../widgets/investment_form_sheet.dart';
 import '../../home/providers/home_provider.dart';
 import '../../../shared/providers/plan_limits_provider.dart';
 import '../../../shared/widgets/plan_limit_sheet.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
 
 // ── Amount mask helpers ───────────────────────────────────────────────────────
 
@@ -87,6 +88,7 @@ class AssetPage extends ConsumerWidget {
                     icon: Icons.account_balance_wallet_rounded,
                     onTap: () => _showWalletForm(context, ref),
                   ),
+                  if (wallets.isNotEmpty) const NativeAdWidget(),
                   const SizedBox(height: AppSpacing.lg),
 
                   // ── Investasi ────────────────────────────────

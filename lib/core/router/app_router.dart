@@ -23,6 +23,7 @@ import '../../features/insights/pages/ai_insight_page.dart';
 import '../../features/subscription/pages/subscription_page.dart';
 import '../../features/categories/pages/manage_categories_page.dart';
 import '../../features/notifications/pages/notification_page.dart';
+import '../../features/settings/pages/misi_page.dart';
 
 // ── Placeholder pages ────────────────────────────────────────────────────────
 class PlaceholderPage extends StatelessWidget {
@@ -223,6 +224,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/notifications',
         name: 'notifications',
         builder: (_, __) => const NotificationPage(),
+      ),
+      GoRoute(
+        path: '/misi',
+        name: 'misi',
+        builder: (_, __) => const MisiPage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

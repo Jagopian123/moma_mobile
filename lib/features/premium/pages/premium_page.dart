@@ -145,8 +145,7 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
             const SizedBox(height: 20),
             // Social proof row
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppRadius.full),
@@ -187,48 +186,112 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
       child: Column(
         children: [
           const SizedBox(height: 16),
+
+          // ── Banner sama persis dengan profile page ──────────────
           Container(
-            padding: const EdgeInsets.all(20),
+            width: double.infinity,
+            height: 96,
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: AppColors.income.withValues(alpha: 0.08),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E3A8A), Color(0xFF3730A3)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(
-                  color: AppColors.income.withValues(alpha: 0.25)),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-            child: const Row(
+            child: Stack(
               children: [
-                Icon(Icons.verified_rounded,
-                    color: AppColors.income, size: 28),
-                SizedBox(width: 14),
-                Expanded(
+                // Lingkaran dekoratif
+                Positioned(
+                  left: -24,
+                  bottom: -24,
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.06),
+                    ),
+                  ),
+                ),
+                // Teks
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, 110, 0),
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Langganan Aktif',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.income,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color:
+                              const Color(0xFFFFD700).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: const Color(0xFFFFD700)
+                                .withValues(alpha: 0.5),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: const Text(
+                          'AKTIF',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFFFD700),
+                            letterSpacing: 1,
+                          ),
                         ),
                       ),
-                      Text(
-                        'Semua fitur Pro sudah bisa kamu nikmati.',
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Moma Premium',
                         style: TextStyle(
                           fontFamily: 'Poppins',
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Semua fitur tanpa batas untukmu',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.75),
                         ),
                       ),
                     ],
                   ),
                 ),
+                // Mascot
+                Positioned(
+                  right: -4,
+                  bottom: 0,
+                  child: Image.asset(
+                    'assets/images/mascot-banner-pro.png',
+                    width: 104,
+                    height: 104,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const SizedBox(width: 104),
+                  ),
+                ),
               ],
             ),
           ),
+
           const SizedBox(height: 24),
-          // Show features they enjoy
           ..._proFeatures.map((f) => _ProFeatureRow(
                 icon: f.icon,
                 title: f.title,
@@ -378,7 +441,7 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
           _PlanCard(
             productId: AppConstants.iapYearly,
             title: 'Tahunan',
-            subtitle: 'Hemat 28% dibanding bulanan',
+            subtitle: 'Hemat 20% dibanding bulanan',
             price: _priceLabel(premium.yearly),
             badge: 'TERPOPULER',
             isSelected: _selected == AppConstants.iapYearly,
@@ -410,9 +473,8 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
 
   Widget _buildBuyButton(PremiumState premium) {
     final isLoading = premium.status == PurchaseFlowStatus.loading;
-    final selected = _selected == AppConstants.iapYearly
-        ? premium.yearly
-        : premium.monthly;
+    final selected =
+        _selected == AppConstants.iapYearly ? premium.yearly : premium.monthly;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -452,7 +514,7 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
                     ),
                     Text(
                       _selected == AppConstants.iapYearly
-                          ? 'Hemat 28% vs bulanan'
+                          ? 'Hemat 20% vs bulanan'
                           : 'Batalkan kapan saja',
                       style: TextStyle(
                         fontFamily: 'Poppins',
@@ -585,6 +647,12 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
       isLimited: true,
     ),
     _TableRow(
+      label: 'Iklan',
+      freeValue: 'Ada iklan',
+      proValue: 'Bebas iklan',
+      isLimited: true,
+    ),
+    _TableRow(
       label: 'Support',
       freeValue: 'Normal',
       proValue: 'Prioritas',
@@ -597,6 +665,11 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
       icon: Icons.all_inclusive_rounded,
       title: 'Semua Fitur Tanpa Batas',
       subtitle: 'Budget, rencana, hutang, investasi — unlimited',
+    ),
+    _FeatureDef(
+      icon: Icons.block_rounded,
+      title: 'Bebas Iklan',
+      subtitle: 'Nikmati aplikasi tanpa gangguan iklan sama sekali',
     ),
     _FeatureDef(
       icon: Icons.auto_awesome_rounded,
@@ -766,9 +839,7 @@ class _ComparisonRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
       decoration: BoxDecoration(
-        color: isAlternate
-            ? const Color(0xFFF8FAFF)
-            : AppColors.white,
+        color: isAlternate ? const Color(0xFFF8FAFF) : AppColors.white,
         border: isLast
             ? null
             : const Border(
@@ -808,8 +879,7 @@ class _ComparisonRow extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 11,
-                    fontWeight:
-                        isLimited ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: isLimited ? FontWeight.w600 : FontWeight.w400,
                     color: freeColor,
                   ),
                 ),
@@ -970,9 +1040,8 @@ class _PlanCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected
-              ? _kIndigo.withValues(alpha: 0.06)
-              : AppColors.white,
+          color:
+              isSelected ? _kIndigo.withValues(alpha: 0.06) : AppColors.white,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
             color: isSelected ? _kIndigo : AppColors.border,
@@ -1013,9 +1082,7 @@ class _PlanCard extends StatelessWidget {
                           fontFamily: 'Poppins',
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: isSelected
-                              ? _kIndigo
-                              : AppColors.textPrimary,
+                          color: isSelected ? _kIndigo : AppColors.textPrimary,
                         ),
                       ),
                       if (badge != null) ...[
@@ -1025,8 +1092,7 @@ class _PlanCard extends StatelessWidget {
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: Colors.amber,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.sm),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
                           ),
                           child: Text(
                             badge!,

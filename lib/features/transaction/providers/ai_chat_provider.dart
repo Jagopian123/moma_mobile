@@ -15,6 +15,10 @@ import '../../../core/hive/models/category_model.dart';
 import '../models/ai_transaction_result.dart';
 import '../providers/transaction_provider.dart';
 
+// ── Ad Bonus Result ───────────────────────────────────────────────────────────
+
+enum AdBonusResult { success, limitReached, error }
+
 // ── Chat Message Model ────────────────────────────────────────────────────────
 
 class ChatMessage {
@@ -191,7 +195,10 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
 
   void _updateCredits(int remaining) {
     HiveService.user.put(AppConstants.keyAiCreditsRemaining, remaining);
-    if (mounted) state = state.copyWith(creditsRemaining: remaining);
+    if (mounted) {
+      state = state.copyWith(creditsRemaining: remaining);
+      _save();
+    }
   }
 
   // ── Text / Voice ────────────────────────────────────────────────────────────
@@ -501,6 +508,34 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
       isLoading: false,
     );
     _save();
+  }
+
+  // Dipanggil saat logout / ganti akun — clear semua cache kredit
+  void reset() {
+    HiveService.user.delete(AppConstants.keyAiCreditsRemaining);
+    if (mounted) state = const AiChatState();
+    _stateFile().then(
+      (file) => file.exists().then((exists) {
+        if (exists) file.delete();
+      }),
+    );
+  }
+
+  // Dipanggil setelah user selesai nonton iklan rewarded
+  Future<AdBonusResult> grantAdBonus() async {
+    try {
+      final response = await ApiService().dio.post('/ai/credits/reward');
+      final remaining = response.data['credits_remaining'] as int?;
+      if (remaining != null) _updateCredits(remaining);
+      return AdBonusResult.success;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 429) return AdBonusResult.limitReached;
+      debugPrint('[AiChat] grantAdBonus failed: ${e.response?.data}');
+      return AdBonusResult.error;
+    } catch (e) {
+      debugPrint('[AiChat] grantAdBonus exception: $e');
+      return AdBonusResult.error;
+    }
   }
 
   void _addCreditLimitMessage() {

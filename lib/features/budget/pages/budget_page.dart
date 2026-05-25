@@ -12,6 +12,7 @@ import '../providers/budget_provider.dart';
 import '../widgets/budget_form_sheet.dart';
 import '../../../shared/providers/plan_limits_provider.dart';
 import '../../../shared/widgets/plan_limit_sheet.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
 
 class BudgetPage extends ConsumerWidget {
   const BudgetPage({super.key});
@@ -86,15 +87,21 @@ class BudgetPage extends ConsumerWidget {
                 const Text('Kategori Budget', style: AppTextStyles.h4),
                 const SizedBox(height: AppSpacing.sm),
 
-                ...budgets.map((budget) => Padding(
+                ...List.generate(budgets.length, (i) {
+                  return [
+                    Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                       child: _BudgetCategoryCard(
-                        budget: budget,
+                        budget: budgets[i],
                         notifier: notifier,
-                        onEdit: () => _showForm(context, budget),
-                        onDelete: () => _confirmDelete(context, ref, budget),
+                        onEdit: () => _showForm(context, budgets[i]),
+                        onDelete: () =>
+                            _confirmDelete(context, ref, budgets[i]),
                       ),
-                    )),
+                    ),
+                    if (i == 1) const NativeAdWidget(),
+                  ];
+                }).expand((w) => w),
               ],
             ),
     );

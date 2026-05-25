@@ -13,6 +13,7 @@ import '../providers/subscription_provider.dart';
 import '../widgets/subscription_form_sheet.dart';
 import '../../transaction/providers/transaction_provider.dart';
 import '../../../shared/providers/plan_limits_provider.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
 import '../../../shared/widgets/plan_limit_sheet.dart';
 
 class SubscriptionPage extends ConsumerStatefulWidget {
@@ -279,6 +280,7 @@ class _SubscriptionTab extends ConsumerWidget {
             ),
           ),
         ),
+        const NativeAdWidget(),
       ],
     );
   }

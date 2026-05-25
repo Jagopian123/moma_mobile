@@ -20,6 +20,7 @@ import '../../financial_plan/providers/financial_plan_provider.dart';
 import '../../debt/providers/debt_provider.dart';
 import '../../subscription/providers/subscription_provider.dart';
 import '../../../shared/providers/app_info_provider.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -195,7 +196,7 @@ class SettingsPage extends ConsumerWidget {
                 icon: Icons.emoji_events_rounded,
                 iconColor: const Color(0xFFF59E0B),
                 label: 'Misi',
-                onTap: () => _showComingSoon(context),
+                onTap: () => context.push('/misi'),
               ),
               _SettingsItem(
                 icon: Icons.cloud_upload_rounded,
@@ -285,6 +286,10 @@ class SettingsPage extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // Native ad — paling bawah sebelum footer
+          const NativeAdWidget(),
           const SizedBox(height: AppSpacing.lg),
 
           // Footer

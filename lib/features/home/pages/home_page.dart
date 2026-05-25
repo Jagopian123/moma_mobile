@@ -20,6 +20,7 @@ import '../providers/home_provider.dart';
 import '../../insights/providers/analytics_provider.dart';
 import '../../insights/models/analytics_data.dart';
 import '../../notifications/providers/notification_provider.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -135,6 +136,8 @@ class HomePage extends ConsumerWidget {
                   _HomeInsightSection(
                     onTap: () => context.push('/ai-insight'),
                   ),
+                  const NativeAdWidget(),
+
                   const SizedBox(height: AppSpacing.lg),
 
                   // ── Budget Preview ─────────────────────────────
@@ -968,6 +971,8 @@ class _RecentTransactions extends StatelessWidget {
             ),
           ),
         ],
+
+        const NativeAdWidget(),
       ],
     );
   }

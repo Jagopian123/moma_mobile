@@ -12,6 +12,7 @@ import '../widgets/debt_form_sheet.dart';
 import '../widgets/payment_sheet.dart';
 import '../../../shared/providers/plan_limits_provider.dart';
 import '../../../shared/widgets/plan_limit_sheet.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
 
 class DebtPage extends ConsumerStatefulWidget {
   const DebtPage({super.key});
@@ -254,14 +255,19 @@ class _DebtListTab extends ConsumerWidget {
         const SizedBox(height: AppSpacing.md),
 
         // List
-        ...items.map((debt) => Padding(
+        ...List.generate(items.length, (i) {
+          return [
+            Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: _DebtCard(
-                debt: debt,
-                onPayment: () => _showPayment(context, debt),
-                onDelete: () => _confirmDelete(context, ref, debt),
+                debt: items[i],
+                onPayment: () => _showPayment(context, items[i]),
+                onDelete: () => _confirmDelete(context, ref, items[i]),
               ),
-            )),
+            ),
+            if (i == 1) const NativeAdWidget(),
+          ];
+        }).expand((w) => w),
       ],
     );
   }

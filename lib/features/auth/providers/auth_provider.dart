@@ -20,6 +20,7 @@ import '../../debt/providers/debt_provider.dart';
 import '../../financial_plan/providers/financial_plan_provider.dart';
 import '../../subscription/providers/subscription_provider.dart';
 import '../../transaction/providers/transaction_provider.dart';
+import '../../transaction/providers/ai_chat_provider.dart';
 import '../../../features/settings/providers/backup_provider.dart';
 
 final _googleSignIn = GoogleSignIn(
@@ -205,6 +206,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // Flush semua data provider agar mereka re-load dari Hive yang sudah bersih.
   // Wajib dipanggil setelah logout / ganti akun.
   void _invalidateDataProviders() {
+    _ref.read(aiChatProvider.notifier).reset();
     _ref.invalidate(transactionProvider);
     _ref.invalidate(walletProvider);
     _ref.invalidate(budgetProvider);

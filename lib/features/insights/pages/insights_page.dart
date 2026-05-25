@@ -13,6 +13,7 @@ import '../widgets/cashflow_chart.dart';
 import '../widgets/donut_chart.dart';
 import '../widgets/weekly_bar_chart.dart';
 import '../widgets/health_score_card.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
 
 class InsightsPage extends ConsumerStatefulWidget {
   const InsightsPage({super.key});
@@ -126,7 +127,7 @@ class _InsightsPageState extends ConsumerState<InsightsPage> {
                   points: data.cashflowPoints,
                   period: period,
                 ),
-                const SizedBox(height: AppSpacing.md),
+                const NativeAdWidget(),
 
                 // Donut Chart
                 DonutChart(categories: data.categoryExpenses),

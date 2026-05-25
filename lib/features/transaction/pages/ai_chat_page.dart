@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/hive/models/category_model.dart';
+import '../../../core/services/admob_service.dart';
 import '../../../core/utils/category_matcher.dart';
 import '../../../core/hive/models/wallet_model.dart';
 import '../../../core/theme/app_theme.dart';
@@ -196,8 +197,7 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   Widget build(BuildContext context) {
     final chatState = ref.watch(aiChatProvider);
     final voiceState = ref.watch(voiceProvider);
-    final isPremium = chatState.isPremium ||
-        (ref.watch(authProvider).user?.isPremium == true);
+    final isPremium = ref.watch(authProvider).user?.isPremium == true;
 
     ref.listen(aiChatProvider, (_, __) => _scrollToBottom());
 
@@ -985,18 +985,94 @@ class _AiBubble extends ConsumerWidget {
 
 // ── Credit Limit Bubble ───────────────────────────────────────────────────────
 
-class _CreditLimitBubble extends ConsumerWidget {
+class _CreditLimitBubble extends ConsumerStatefulWidget {
   final VoidCallback onUpgrade;
   const _CreditLimitBubble({required this.onUpgrade});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CreditLimitBubble> createState() => _CreditLimitBubbleState();
+}
+
+class _CreditLimitBubbleState extends ConsumerState<_CreditLimitBubble> {
+  bool _isWatchingAd = false;
+  bool _adGranted = false;
+
+  Future<void> _watchAd() async {
+    if (_isWatchingAd) return;
+
+    if (!AdmobService.isReady) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Iklan belum siap, coba lagi sebentar.',
+            style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
+          ),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isWatchingAd = true);
+
+    final shown = await AdmobService.showRewardedAd(
+      onRewarded: () async {
+        final result = await ref.read(aiChatProvider.notifier).grantAdBonus();
+        if (!mounted) return;
+        setState(() {
+          _isWatchingAd = false;
+          _adGranted = result == AdBonusResult.success;
+        });
+        if (result == AdBonusResult.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '+${AppConstants.adBonusCredits} kredit AI berhasil ditambahkan!',
+                style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
+              ),
+              backgroundColor: AppColors.income,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else if (result == AdBonusResult.limitReached) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Sudah 3x nonton hari ini. Kembali besok!',
+                style: TextStyle(fontFamily: 'Poppins', fontSize: 13),
+              ),
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      },
+    );
+
+    if (!shown && mounted) {
+      setState(() => _isWatchingAd = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isPremium = ref.read(authProvider).user?.isPremium == true;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _aiAvatarWidget(ref),
+          Image.asset(
+            isPremium
+                ? 'assets/images/mascot-profile-pro.png'
+                : 'assets/images/mascot-profile.png',
+            width: 28,
+            height: 28,
+            fit: BoxFit.contain,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Container(
@@ -1050,7 +1126,7 @@ class _CreditLimitBubble extends ConsumerWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: onUpgrade,
+                      onPressed: widget.onUpgrade,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4F46E5),
                         foregroundColor: Colors.white,
@@ -1070,24 +1146,72 @@ class _CreditLimitBubble extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  if (!_adGranted) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _isWatchingAd ? null : _watchAd,
+                        icon: _isWatchingAd
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.amber,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.play_circle_outline_rounded,
+                                size: 16,
+                                color: Colors.amber,
+                              ),
+                        label: Text(
+                          _isWatchingAd
+                              ? 'Memuat iklan...'
+                              : 'Tonton Iklan (+${AppConstants.adBonusCredits} kredit)',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.amber,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          side: BorderSide(
+                              color: Colors.amber.withValues(alpha: 0.6)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_rounded,
+                            color: AppColors.income, size: 14),
+                        SizedBox(width: 4),
+                        Text(
+                          'Kredit bonus berhasil ditambahkan',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            color: AppColors.income,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _aiAvatarWidget(WidgetRef ref) {
-    final isPremium = ref.read(authProvider).user?.isPremium == true;
-    return Image.asset(
-      isPremium
-          ? 'assets/images/mascot-profile-pro.png'
-          : 'assets/images/mascot-profile.png',
-      width: 28,
-      height: 28,
-      fit: BoxFit.contain,
     );
   }
 }

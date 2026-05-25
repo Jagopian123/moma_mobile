@@ -7,6 +7,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/hive/models/transaction_model.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_progress_bar.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
 import '../providers/transaction_provider.dart';
 
 class SummaryTab extends ConsumerStatefulWidget {
@@ -61,6 +62,8 @@ class _SummaryTabState extends ConsumerState<SummaryTab> {
               allTransactions: allTx,
               year: _year,
             )),
+
+        if (allTx.isNotEmpty) const NativeAdWidget(),
       ],
     );
   }

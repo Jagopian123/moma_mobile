@@ -37,18 +37,25 @@ class HiveService {
     Hive.registerAdapter(SubscriptionModelAdapter());
     Hive.registerAdapter(InAppNotificationModelAdapter());
 
-    // Buka semua box sekaligus
+    // Box kritis: dibutuhkan sebelum frame pertama tampil
     await Future.wait([
       Hive.openBox<WalletModel>(walletBox),
       Hive.openBox<TransactionModel>(transactionBox),
       Hive.openBox<CategoryModel>(categoryBox),
       Hive.openBox<BudgetModel>(budgetBox),
       Hive.openBox<FinancialPlanModel>(financialPlanBox),
-      Hive.openBox<DebtModel>(debtBox),
-      Hive.openBox<InvestmentModel>(investmentBox),
       Hive.openBox<SubscriptionModel>(subscriptionBox),
       Hive.openBox<InAppNotificationModel>(notificationBox),
       Hive.openBox(userBox),
+    ]);
+  }
+
+  // Box non-kritis: dibuka di background setelah frame pertama
+  static Future<void> initLazy() async {
+    if (Hive.isBoxOpen(debtBox)) return;
+    await Future.wait([
+      Hive.openBox<DebtModel>(debtBox),
+      Hive.openBox<InvestmentModel>(investmentBox),
     ]);
   }
 

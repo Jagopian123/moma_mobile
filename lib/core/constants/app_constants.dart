@@ -38,4 +38,19 @@ class AppConstants {
 
   // Free tier AI credit limit per month
   static const int aiFreeMonthlyLimit = 30;
+
+  // AdMob — dibaca dari env
+  static String get admobRewardedId =>
+      dotenv.env['ADMOB_REWARDED_ID'] ?? '';
+  static String get admobNativeId =>
+      dotenv.env['ADMOB_NATIVE_ID'] ?? '';
+  static const int adBonusCredits = 5;
+  static const int adMaxPerDay    = 3;
+
+  // Native ad eligibility
+  static const int adEligibilityDays = 3;
+  static const int adEligibilityMinTx = 5;
+
+  // Hive key for install date
+  static const String keyInstallDate = 'app_install_date';
 }

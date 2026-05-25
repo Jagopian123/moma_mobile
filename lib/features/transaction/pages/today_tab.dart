@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/native_ad_widget.dart';
 import '../providers/transaction_provider.dart';
 import '../widgets/transaction_card.dart';
 
@@ -36,17 +37,29 @@ class TodayTab extends ConsumerWidget {
 
         // ── List transaksi ───────────────────────────────────
         if (transactions.isEmpty)
-          AppEmptyState(
+          const AppEmptyState(
             emoji: '📭',
             imagePath: 'assets/images/mascot-transaksi.png',
             title: 'Belum ada transaksi',
             description: 'Tap tombol + untuk mencatat transaksi hari ini',
           )
         else
-          ...transactions.map((tx) => Padding(
+          ...List.generate(transactions.length, (i) {
+            final widgets = <Widget>[
+              Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: TransactionCard(transaction: tx),
-              )),
+                child: TransactionCard(transaction: transactions[i]),
+              ),
+            ];
+            if ((i + 1) % 10 == 0) {
+              widgets.add(const NativeAdWidget());
+            }
+            return widgets;
+          }).expand((w) => w),
+
+        // Tampilkan 1 iklan di bawah jika < 10 transaksi (every-10 belum trigger)
+        if (transactions.isNotEmpty && transactions.length < 10)
+          const NativeAdWidget(),
       ],
     );
   }
