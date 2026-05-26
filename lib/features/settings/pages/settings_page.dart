@@ -248,7 +248,7 @@ class SettingsPage extends ConsumerWidget {
                 icon: Icons.bug_report_rounded,
                 iconColor: const Color(0xFFF97316),
                 label: 'Laporan Bug & Saran',
-                onTap: () => _showComingSoon(context),
+                onTap: () => _showFeedbackSheet(context),
               ),
               _SettingsItem(
                 icon: Icons.privacy_tip_rounded,
@@ -449,6 +449,75 @@ class SettingsPage extends ConsumerWidget {
         backgroundColor: AppColors.primary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+      ),
+    );
+  }
+
+  void _showFeedbackSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadius.xl),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                  ),
+                ),
+              ),
+              const Text('Laporan Bug & Saran', style: AppTextStyles.h3),
+              const SizedBox(height: 4),
+              const Text(
+                'Bantu kami membuat Moma lebih baik',
+                style: AppTextStyles.caption,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _ExportOption(
+                icon: Icons.bug_report_rounded,
+                iconColor: const Color(0xFFF97316),
+                label: 'Laporkan Bug',
+                description: 'Ada fitur yang tidak berfungsi? Ceritakan ke kami',
+                onTap: () {
+                  Navigator.pop(context);
+                  launchUrl(
+                    Uri.parse('https://docs.google.com/forms/d/e/1FAIpQLSfvzgGK3jlT4CQSHeAgP-yF9i0YmH8Bcrbtj-RNGFkw8YvkIg/viewform?usp=header'),
+                    mode: LaunchMode.externalApplication,
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ExportOption(
+                icon: Icons.lightbulb_rounded,
+                iconColor: const Color(0xFF6366F1),
+                label: 'Saran Fitur',
+                description: 'Punya ide fitur baru? Kami ingin mendengarnya',
+                onTap: () {
+                  Navigator.pop(context);
+                  launchUrl(
+                    Uri.parse('https://docs.google.com/forms/d/e/1FAIpQLSer5_cPE6QTt86Xz2pnfs-CERE0m6pCRQBRmQ7QjPVfg66v7w/viewform?usp=header'),
+                    mode: LaunchMode.externalApplication,
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

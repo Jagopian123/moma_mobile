@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/hive/models/category_model.dart';
 import '../../../core/services/admob_service.dart';
+import '../../../core/services/rating_service.dart';
 import '../../../core/utils/category_matcher.dart';
 import '../../../core/hive/models/wallet_model.dart';
 import '../../../core/theme/app_theme.dart';
@@ -1414,6 +1415,7 @@ class _TransactionCardState extends ConsumerState<_TransactionCard> {
       setState(() => _saving = false);
       if (success) {
         ref.read(aiChatProvider.notifier).markSaved(_cardKey, editedAmount);
+        RatingService.onTransactionSaved();
       }
     }
   }

@@ -65,6 +65,7 @@ dependencies:
   timezone: ^0.9.4
 
   # Utils
+  in_app_review: ^2.0.0
   package_info_plus: ^8.0.0
   url_launcher: ^6.3.1
   flutter_dotenv: ^5.2.1
