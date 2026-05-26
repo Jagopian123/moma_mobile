@@ -4,6 +4,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../hive/hive_service.dart';
 import '../hive/models/budget_model.dart';
+import 'notification_navigator.dart';
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
@@ -32,6 +33,9 @@ class NotificationService {
 
     await _plugin.initialize(
       const InitializationSettings(android: androidSettings, iOS: iosSettings),
+      onDidReceiveNotificationResponse: (response) {
+        NotificationNavigator.handleRoute(response.payload);
+      },
     );
 
     await _plugin
@@ -87,6 +91,7 @@ class NotificationService {
         '🚨 Budget ${budget.categoryName} Habis!',
         'Pengeluaran sudah melebihi limit ${_fmt(budget.limitAmount)}',
         NotificationDetails(android: _androidDetails),
+        payload: 'budget',
       );
     } else if (pctBefore < 0.8 && pctAfter >= 0.8) {
       await _plugin.show(
@@ -94,6 +99,7 @@ class NotificationService {
         '⚠️ Budget ${budget.categoryName} Hampir Habis',
         'Sudah ${(pctAfter * 100).toStringAsFixed(0)}% dari ${_fmt(budget.limitAmount)}',
         NotificationDetails(android: _androidDetails),
+        payload: 'budget',
       );
     }
   }
@@ -121,6 +127,7 @@ class NotificationService {
           title: '📅 ${sub.icon} ${sub.name} — 3 Hari Lagi',
           body: 'Tagihan ${_fmt(sub.amount)} jatuh tempo dalam 3 hari',
           scheduledDate: h3,
+          payload: 'subscription',
         );
         notifIndex++;
       }
@@ -132,6 +139,7 @@ class NotificationService {
           title: '⏰ ${sub.icon} ${sub.name} — Besok!',
           body: 'Tagihan ${_fmt(sub.amount)} jatuh tempo besok',
           scheduledDate: h1,
+          payload: 'subscription',
         );
         notifIndex++;
       }
@@ -164,6 +172,7 @@ class NotificationService {
           title: '💰 $label — 7 Hari Lagi',
           body: '${_fmt(debt.remainingAmount)} jatuh tempo dalam 7 hari',
           scheduledDate: h7,
+          payload: 'debt',
         );
         notifIndex++;
       }
@@ -175,6 +184,7 @@ class NotificationService {
           title: '⚠️ $label — Besok!',
           body: '${_fmt(debt.remainingAmount)} jatuh tempo besok!',
           scheduledDate: h1,
+          payload: 'debt',
         );
         notifIndex++;
       }
@@ -209,6 +219,25 @@ class NotificationService {
     await _plugin.cancel(9000);
   }
 
+  // ── FCM Foreground ────────────────────────────────────────────────────────────
+  // Dipanggil dari FcmService saat pesan FCM masuk ketika app di foreground.
+  // FCM tidak auto-tampil saat foreground, jadi kita tampilkan via local notif.
+
+  static Future<void> showInstantNotification({
+    required String title,
+    required String body,
+    int id = 8000,
+    String? payload,
+  }) async {
+    await _plugin.show(
+      id,
+      title,
+      body,
+      NotificationDetails(android: _androidDetails),
+      payload: payload,
+    );
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────────
 
   static Future<void> _scheduleNotif({
@@ -216,6 +245,7 @@ class NotificationService {
     required String title,
     required String body,
     required DateTime scheduledDate,
+    String? payload,
   }) async {
     final tzDate = tz.TZDateTime.from(scheduledDate, tz.local);
     await _plugin.zonedSchedule(
@@ -227,6 +257,7 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
+      payload: payload,
     );
   }
 

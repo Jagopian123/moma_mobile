@@ -24,6 +24,7 @@ import '../../features/subscription/pages/subscription_page.dart';
 import '../../features/categories/pages/manage_categories_page.dart';
 import '../../features/notifications/pages/notification_page.dart';
 import '../../features/settings/pages/misi_page.dart';
+import '../services/notification_navigator.dart';
 
 // ── Placeholder pages ────────────────────────────────────────────────────────
 class PlaceholderPage extends StatelessWidget {
@@ -114,6 +115,11 @@ class _GoRouterNotifier extends ChangeNotifier {
   }
 }
 
+// Referensi global router — dipakai NotificationNavigator untuk navigate
+// tanpa perlu BuildContext (aman dipanggil dari service/FCM handler).
+GoRouter? _globalRouter;
+GoRouter? get globalRouter => _globalRouter;
+
 // ── Router Provider ──────────────────────────────────────────────────────────
 // GoRouter dibuat SEKALI dan tidak pernah di-recreate.
 // Auth change hanya men-trigger re-run redirect, bukan recreate router.
@@ -122,6 +128,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   final router = GoRouter(
     initialLocation: '/splash',
+    overridePlatformDefaultLocation: true,
     debugLogDiagnostics: false,
     refreshListenable: notifier,
     redirect: (_, state) => notifier.redirect(state),
@@ -231,36 +238,64 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const MisiPage(),
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 48, color: Color(0xFFEF4444)),
-            const SizedBox(height: 12),
-            const Text(
-              'Halaman tidak ditemukan',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+    errorBuilder: (context, state) {
+      final rawPath = state.uri.path;
+
+      // Platform Android mengirim route dari intent (misal "ai-chat" tanpa slash)
+      // langsung ke GoRouter via didPushRouteInformation — tidak ada slash sehingga
+      // tidak cocok dengan route manapun. Recovery: queue dan navigate ke home,
+      // lalu navigatePending di HomePage akan push ke path yang benar.
+      if (!rawPath.startsWith('/') && rawPath.isNotEmpty) {
+        NotificationNavigator.queueRoute(rawPath);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.go('/home');
+        });
+        return const Scaffold(
+          backgroundColor: Color(0xFFF8FAFC),
+          body: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xFF2563EB),
+            ),
+          ),
+        );
+      }
+
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline_rounded,
+                  size: 48, color: Color(0xFFEF4444)),
+              const SizedBox(height: 12),
+              const Text(
+                'Halaman tidak ditemukan',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => context.go('/home'),
-              child: const Text('Kembali ke Home'),
-            ),
-          ],
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => context.go('/home'),
+                child: const Text('Kembali ke Home'),
+              ),
+            ],
+          ),
         ),
-      ),
-    ),
+      );
+    },
   );
+
+  _globalRouter = router;
+  NotificationNavigator.attach(router);
 
   ref.onDispose(() {
     notifier.dispose();
     router.dispose();
+    _globalRouter = null;
   });
 
   return router;

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/services/notification_navigator.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/hive/models/transaction_model.dart';
@@ -22,11 +23,40 @@ import '../../insights/models/analytics_data.dart';
 import '../../notifications/providers/notification_provider.dart';
 import '../../../shared/widgets/native_ad_widget.dart';
 
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
+  StreamSubscription<String>? _routeSub;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _routeSub = NotificationNavigator.onRouteRequired.listen((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) NotificationNavigator.navigatePending(context);
+      });
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      NotificationNavigator.navigatePending(context);
+    });
+  }
+
+  @override
+  void dispose() {
+    _routeSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final wallets = ref.watch(walletProvider);
     final transactions = ref.watch(transactionProvider);

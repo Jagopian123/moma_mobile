@@ -22,6 +22,8 @@ import '../../subscription/providers/subscription_provider.dart';
 import '../../transaction/providers/transaction_provider.dart';
 import '../../transaction/providers/ai_chat_provider.dart';
 import '../../../features/settings/providers/backup_provider.dart';
+import '../../notifications/providers/notification_provider.dart';
+import '../../../core/services/fcm_service.dart';
 
 final _googleSignIn = GoogleSignIn(
   serverClientId: AppConstants.googleWebClientId,
@@ -126,6 +128,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
         state = AuthState.authenticated(user);
 
+        // Kirim FCM token ke server agar bisa terima push notification
+        FcmService.sendTokenToServer();
+
         // Auto-restore: jika Hive kosong, coba ambil backup dari server
         _tryRestoreIfEmpty();
       } else {
@@ -151,6 +156,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> signOut() async {
     await _googleSignIn.signOut();
+    // Hapus FCM token dari server sebelum logout agar tidak terima notif akun lama
+    await FcmService.deleteTokenFromServer();
     try {
       await _api.post('/auth/logout').timeout(const Duration(seconds: 5));
     } catch (_) {}
@@ -162,6 +169,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> deleteAccount() async {
+    await FcmService.deleteTokenFromServer();
     await _api.delete('/user');
     await _googleSignIn.signOut();
     await HiveService.clearAllUserData();
@@ -207,6 +215,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // Wajib dipanggil setelah logout / ganti akun.
   void _invalidateDataProviders() {
     _ref.read(aiChatProvider.notifier).reset();
+    _ref.invalidate(notificationProvider);
     _ref.invalidate(transactionProvider);
     _ref.invalidate(walletProvider);
     _ref.invalidate(budgetProvider);

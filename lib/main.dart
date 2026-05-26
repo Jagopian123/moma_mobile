@@ -1,15 +1,18 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+import 'firebase_options.dart';
 import 'core/hive/hive_service.dart';
 import 'core/hive/category_seeder.dart';
 import 'core/services/ad_eligibility_service.dart';
 import 'core/router/app_router.dart';
 import 'core/services/api_service.dart';
 import 'core/services/admob_service.dart';
+import 'core/services/fcm_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/providers/auth_provider.dart';
@@ -46,6 +49,9 @@ void main() async {
     ),
   );
 
+  // Firebase harus diinit sebelum FCM
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   // Hive harus selesai sebelum CategorySeeder
   await HiveService.init();
   await CategorySeeder.seed();
@@ -77,6 +83,7 @@ class _MomaAppState extends ConsumerState<MomaApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Buka box debt & investment di background setelah frame pertama
       await HiveService.initLazy();
@@ -86,6 +93,8 @@ class _MomaAppState extends ConsumerState<MomaApp> with WidgetsBindingObserver {
       _scheduleNotifications();
       // Init AdMob di background — tidak perlu await
       AdmobService.init();
+      // Init FCM: minta permission + setup listener foreground/background
+      FcmService.init();
     });
   }
 
