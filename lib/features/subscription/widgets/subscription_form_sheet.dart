@@ -613,34 +613,105 @@ class _WalletPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wallets = HiveService.wallets.values.toList();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<WalletModel?>(
-          value: selected,
-          isExpanded: true,
-          hint: const Text('Pilih dompet...',
-              style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 13,
-                  color: AppColors.textHint)),
-          style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 13,
-              color: AppColors.textPrimary),
-          items: [
-            const DropdownMenuItem<WalletModel?>(
-                value: null, child: Text('Tidak ada')),
-            ...wallets.map(
-                (w) => DropdownMenuItem(value: w, child: Text(w.name))),
-          ],
-          onChanged: onChanged,
+
+    if (wallets.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
         ),
+        child: const Text(
+          'Belum ada dompet. Tambahkan di halaman Aset.',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 13,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          // chip "Tanpa dompet"
+          GestureDetector(
+            onTap: () => onChanged(null),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: selected == null
+                    ? AppColors.textHint.withValues(alpha: 0.12)
+                    : AppColors.background,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: selected == null
+                      ? AppColors.textSecondary
+                      : AppColors.border,
+                  width: selected == null ? 1.5 : 1,
+                ),
+              ),
+              child: Text(
+                'Tanpa dompet',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: selected == null
+                      ? AppColors.textSecondary
+                      : AppColors.textHint,
+                ),
+              ),
+            ),
+          ),
+          ...wallets.map((wallet) {
+            final isSelected = selected?.id == wallet.id;
+            final color = Color(
+              int.parse(wallet.color.replaceFirst('#', '0xFF')),
+            );
+            return GestureDetector(
+              onTap: () => onChanged(wallet),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.only(right: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? color.withValues(alpha: 0.12)
+                      : AppColors.background,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(
+                    color: isSelected ? color : AppColors.border,
+                    width: isSelected ? 1.5 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Text(wallet.icon,
+                        style: const TextStyle(fontSize: 16)),
+                    const SizedBox(width: 6),
+                    Text(
+                      wallet.name,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color:
+                            isSelected ? color : AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
