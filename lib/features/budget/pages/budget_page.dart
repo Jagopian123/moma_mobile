@@ -162,32 +162,44 @@ class _OverallDashboard extends StatelessWidget {
   Widget? _buildInsight(
       int overCount, int fastCount, int slightlyCount, int safeCount) {
     if (overCount > 0) {
-      return _InsightRow(
-        emoji: '😬',
-        text: '$overCount kategori sudah melampaui budget bulan ini. '
-            'Cek dan kurangi pengeluaran!',
+      return _InsightBox(
         color: AppColors.danger,
+        child: _InsightRow(
+          emoji: '😬',
+          text: '$overCount kategori sudah melampaui budget bulan ini. '
+              'Cek dan kurangi pengeluaran!',
+          color: AppColors.danger,
+        ),
       );
     }
     if (fastCount > 0) {
-      return _InsightRow(
-        emoji: '🧐',
-        text: '$fastCount kategori nyaris habis — hati-hati di sisa bulan ini!',
+      return _InsightBox(
         color: AppColors.danger,
+        child: _InsightRow(
+          emoji: '🧐',
+          text: '$fastCount kategori nyaris habis — hati-hati di sisa bulan ini!',
+          color: AppColors.danger,
+        ),
       );
     }
     if (slightlyCount > 0) {
-      return _InsightRow(
-        emoji: '⚠️',
-        text: '$slightlyCount kategori perlu lebih diperhatikan minggu ini',
+      return _InsightBox(
         color: AppColors.warning,
+        child: _InsightRow(
+          emoji: '⚠️',
+          text: '$slightlyCount kategori perlu lebih diperhatikan minggu ini',
+          color: AppColors.warning,
+        ),
       );
     }
     if (safeCount > 0) {
-      return const _InsightRow(
-        emoji: '🎉',
-        text: 'Semua kategori berjalan on track, pertahankan!',
+      return const _InsightBox(
         color: AppColors.safe,
+        child: _InsightRow(
+          emoji: '🎉',
+          text: 'Semua kategori berjalan on track, pertahankan!',
+          color: AppColors.safe,
+        ),
       );
     }
     return null;
@@ -586,10 +598,13 @@ class _BudgetCategoryCard extends StatelessWidget {
 
     // 1. Over budget
     if (percentage >= 1.0) {
-      return _InsightRow(
-        emoji: '😬',
-        text: 'Budget terlampaui ${fmt(spent - limit)} bulan ini. Yuk lebih hati-hati!',
+      return _InsightBox(
         color: AppColors.danger,
+        child: _InsightRow(
+          emoji: '😬',
+          text: 'Budget terlampaui ${fmt(spent - limit)} bulan ini. Yuk lebih hati-hati!',
+          color: AppColors.danger,
+        ),
       );
     }
 
@@ -606,16 +621,22 @@ class _BudgetCategoryCard extends StatelessWidget {
     // 3. Sisa ≤ 3 hari akhir bulan
     if (daysLeft <= 3 && daysLeft > 0) {
       if (remaining <= 0) {
-        return _InsightRow(
-          emoji: '😬',
-          text: 'Budget habis! $daysLeft hari lagi hingga akhir bulan',
+        return _InsightBox(
           color: AppColors.danger,
+          child: _InsightRow(
+            emoji: '😬',
+            text: 'Budget habis! $daysLeft hari lagi hingga akhir bulan',
+            color: AppColors.danger,
+          ),
         );
       }
-      return _InsightRow(
-        emoji: '⏰',
-        text: 'Tinggal $daysLeft hari lagi! Sisa budget ${fmt(remaining)}',
+      return _InsightBox(
         color: AppColors.warning,
+        child: _InsightRow(
+          emoji: '⏰',
+          text: 'Tinggal $daysLeft hari lagi! Sisa budget ${fmt(remaining)}',
+          color: AppColors.warning,
+        ),
       );
     }
 
@@ -624,68 +645,77 @@ class _BudgetCategoryCard extends StatelessWidget {
       final daysUntilEmpty = remaining / dailyAvg;
       if (daysUntilEmpty < daysLeft) {
         final runOutDay = (currentDay + daysUntilEmpty).round();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _InsightRow(
-              emoji: '⚠️',
-              text: 'Dengan pola ini, budget habis sekitar tanggal $runOutDay',
-              color: AppColors.danger,
-            ),
-            if (idealDaily > 0) ...[
-              const SizedBox(height: 6),
+        return _InsightBox(
+          color: AppColors.danger,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               _InsightRow(
-                emoji: '💡',
-                text: 'Kurangi jadi ~${fmt(idealDaily)}/hari agar pas sampai akhir bulan',
-                color: AppColors.textSecondary,
+                emoji: '⚠️',
+                text: 'Dengan pola ini, budget habis sekitar tanggal $runOutDay',
+                color: AppColors.danger,
               ),
+              if (idealDaily > 0) ...[
+                const SizedBox(height: 6),
+                _InsightRow(
+                  emoji: '💡',
+                  text: 'Kurangi jadi ~${fmt(idealDaily)}/hari agar pas sampai akhir bulan',
+                  color: AppColors.textSecondary,
+                ),
+              ],
             ],
-          ],
+          ),
         );
       }
     }
 
     // 5. Spending lebih cepat dari waktu berjalan
     if (percentage > timePerc + 0.15 && daysLeft > 0) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _InsightRow(
-            emoji: '⚠️',
-            text: 'Pengeluaran lebih cepat dari seharusnya',
-            color: AppColors.warning,
-          ),
-          if (idealDaily > 0) ...[
-            const SizedBox(height: 6),
-            _InsightRow(
-              emoji: '💡',
-              text: 'Coba max ${fmt(idealDaily)}/hari agar budget aman sampai akhir bulan',
-              color: AppColors.textSecondary,
+      return _InsightBox(
+        color: AppColors.warning,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _InsightRow(
+              emoji: '⚠️',
+              text: 'Pengeluaran lebih cepat dari seharusnya',
+              color: AppColors.warning,
             ),
+            if (idealDaily > 0) ...[
+              const SizedBox(height: 6),
+              _InsightRow(
+                emoji: '💡',
+                text: 'Coba max ${fmt(idealDaily)}/hari agar budget aman sampai akhir bulan',
+                color: AppColors.textSecondary,
+              ),
+            ],
           ],
-        ],
+        ),
       );
     }
 
     // 6. Hemat — jauh di bawah ekspektasi waktu
     if (percentage < timePerc - 0.2 && timePerc > 0.25 && daysLeft > 0) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _InsightRow(
-            emoji: '🎉',
-            text: 'Pengeluaranmu terkendali, pertahankan!',
-            color: AppColors.safe,
-          ),
-          if (idealDaily > 0) ...[
-            const SizedBox(height: 6),
-            _InsightRow(
-              emoji: '💡',
-              text: 'Sisa ${fmt(remaining)} untuk $daysLeft hari — bisa pakai ${fmt(idealDaily)}/hari',
-              color: AppColors.textSecondary,
+      return _InsightBox(
+        color: AppColors.safe,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _InsightRow(
+              emoji: '🎉',
+              text: 'Pengeluaranmu terkendali, pertahankan!',
+              color: AppColors.safe,
             ),
+            if (idealDaily > 0) ...[
+              const SizedBox(height: 6),
+              _InsightRow(
+                emoji: '💡',
+                text: 'Sisa ${fmt(remaining)} untuk $daysLeft hari — bisa pakai ${fmt(idealDaily)}/hari',
+                color: AppColors.textSecondary,
+              ),
+            ],
           ],
-        ],
+        ),
       );
     }
 
@@ -699,6 +729,26 @@ class _BudgetCategoryCard extends StatelessWidget {
     }
 
     return null;
+  }
+}
+
+class _InsightBox extends StatelessWidget {
+  final Color color;
+  final Widget child;
+
+  const _InsightBox({required this.color, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: child,
+    );
   }
 }
 
