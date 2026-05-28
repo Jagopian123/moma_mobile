@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/services/banner_service.dart';
 import '../../../core/services/notification_navigator.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -46,7 +48,21 @@ class _HomePageState extends ConsumerState<HomePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       NotificationNavigator.navigatePending(context);
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _showBannerIfAvailable();
+      });
     });
+  }
+
+  Future<void> _showBannerIfAvailable() async {
+    final banner = await BannerService.getActive();
+    if (banner == null || !mounted) return;
+    await showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (_) => _BannerDialog(banner: banner),
+    );
+    BannerService.markShown(banner);
   }
 
   @override
@@ -1055,6 +1071,76 @@ class _NotifBell extends ConsumerWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Banner Dialog ─────────────────────────────────────────────────────────────
+
+class _BannerDialog extends StatelessWidget {
+  final BannerData banner;
+  const _BannerDialog({required this.banner});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: GestureDetector(
+                  onTap: banner.linkUrl != null
+                      ? () {
+                          Navigator.pop(context);
+                          launchUrl(
+                            Uri.parse(banner.linkUrl!),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      : null,
+                  child: Image.network(
+                    banner.imageUrl,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    loadingBuilder: (_, child, progress) => progress == null
+                        ? child
+                        : const SizedBox(
+                            height: 200,
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -12,
+                right: -12,
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      color: Colors.black87,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close_rounded,
+                        color: Colors.white, size: 18),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
