@@ -162,7 +162,7 @@ class _OverallDashboard extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 13,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha:0.8),
             ),
           ),
           const SizedBox(height: 4),
@@ -181,7 +181,7 @@ class _OverallDashboard extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 13,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha:0.8),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -191,7 +191,7 @@ class _OverallDashboard extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.full),
             child: LinearProgressIndicator(
               value: pct,
-              backgroundColor: Colors.white.withOpacity(0.2),
+              backgroundColor: Colors.white.withValues(alpha:0.2),
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
               minHeight: 8,
             ),
@@ -245,6 +245,10 @@ class _PlanCard extends StatelessWidget {
     final remaining =
         (plan.targetAmount - plan.savedAmount).clamp(0.0, double.infinity);
     final daysLeft = notifier.getDaysLeft(plan);
+    final relativeTime = notifier.getRelativeTime(plan);
+    final monthlyRec = notifier.getMonthlyRecommendation(plan);
+    final estimatedCompletion =
+        plan.deadline == null ? notifier.getEstimatedCompletion(plan) : null;
     final isDone = plan.savedAmount >= plan.targetAmount;
 
     // Kontribusi terbaru (3 terakhir)
@@ -279,7 +283,7 @@ class _PlanCard extends StatelessWidget {
                     const SizedBox(height: 4),
 
                     // Deadline
-                    if (daysLeft != null)
+                    if (relativeTime != null)
                       Row(
                         children: [
                           Icon(
@@ -287,19 +291,17 @@ class _PlanCard extends StatelessWidget {
                                 ? Icons.warning_rounded
                                 : Icons.schedule_rounded,
                             size: 14,
-                            color: daysLeft <= 7
+                            color: (daysLeft != null && daysLeft <= 7)
                                 ? AppColors.danger
                                 : AppColors.textSecondary,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            daysLeft == 0
-                                ? 'Deadline hari ini!'
-                                : '$daysLeft hari lagi',
+                            relativeTime,
                             style: TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 12,
-                              color: daysLeft <= 7
+                              color: (daysLeft != null && daysLeft <= 7)
                                   ? AppColors.danger
                                   : AppColors.textSecondary,
                             ),
@@ -314,7 +316,7 @@ class _PlanCard extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.safe.withOpacity(0.1),
+                          color: AppColors.safe.withValues(alpha:0.1),
                           borderRadius: BorderRadius.circular(AppRadius.full),
                         ),
                         child: const Text(
@@ -392,6 +394,37 @@ class _PlanCard extends StatelessWidget {
             ],
           ),
 
+          // ── Insight chip ────────────────────────────────────
+          if (!isDone && (monthlyRec != null || estimatedCompletion != null)) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb_outline_rounded, size: 13, color: color),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      monthlyRec != null
+                          ? 'Nabung ~${CurrencyFormatter.formatCompact(monthlyRec)}/bln biar tepat waktu'
+                          : 'Estimasi selesai $estimatedCompletion',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           // ── Kontribusi terbaru ───────────────────────────────
           if (recentContribs.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
@@ -450,7 +483,7 @@ class _PlanCard extends StatelessWidget {
                 ),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  side: BorderSide(color: color.withOpacity(0.4)),
+                  side: BorderSide(color: color.withValues(alpha:0.4)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
