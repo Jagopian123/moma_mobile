@@ -4,6 +4,7 @@ class UserModel {
   final String email;
   final String? avatar;
   final bool isPremium;
+  final DateTime? premiumExpiresAt;
   final String currency;
   final String locale;
 
@@ -13,6 +14,7 @@ class UserModel {
     required this.email,
     this.avatar,
     required this.isPremium,
+    this.premiumExpiresAt,
     required this.currency,
     required this.locale,
   });
@@ -24,6 +26,9 @@ class UserModel {
       email: json['email'],
       avatar: json['avatar'],
       isPremium: json['is_premium'] ?? false,
+      premiumExpiresAt: json['premium_expires_at'] != null
+          ? DateTime.tryParse(json['premium_expires_at'].toString())
+          : null,
       currency: json['currency'] ?? 'IDR',
       locale: json['locale'] ?? 'id',
     );
@@ -35,6 +40,7 @@ class UserModel {
         'email': email,
         'avatar': avatar,
         'is_premium': isPremium,
+        'premium_expires_at': premiumExpiresAt?.toIso8601String(),
         'currency': currency,
         'locale': locale,
       };
@@ -45,6 +51,7 @@ class UserModel {
     String? email,
     String? avatar,
     bool? isPremium,
+    DateTime? premiumExpiresAt,
     String? currency,
     String? locale,
   }) {
@@ -54,6 +61,7 @@ class UserModel {
       email: email ?? this.email,
       avatar: avatar ?? this.avatar,
       isPremium: isPremium ?? this.isPremium,
+      premiumExpiresAt: premiumExpiresAt ?? this.premiumExpiresAt,
       currency: currency ?? this.currency,
       locale: locale ?? this.locale,
     );

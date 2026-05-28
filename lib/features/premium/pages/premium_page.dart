@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
@@ -181,6 +182,10 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
   // ── Already Premium ───────────────────────────────────────────────────────
 
   Widget _buildAlreadyPremium() {
+    final expiresAt = ref.watch(authProvider).user?.premiumExpiresAt;
+    final expiryText = expiresAt == null
+        ? 'Aktif selamanya'
+        : 'Berakhir ${DateFormat('d MMMM yyyy', 'id').format(expiresAt)}';
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -265,7 +270,7 @@ class _PremiumPageState extends ConsumerState<PremiumPage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Semua fitur tanpa batas untukmu',
+                        expiryText,
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 11,

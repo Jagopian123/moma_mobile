@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -290,9 +291,13 @@ class ProfilePage extends ConsumerWidget {
 
 // ── Premium Badge ────────────────────────────────────────────────────────────
 
-class _PremiumBadge extends StatelessWidget {
+class _PremiumBadge extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final expiresAt = ref.watch(authProvider).user?.premiumExpiresAt;
+    final expiryText = expiresAt == null
+        ? 'Aktif selamanya'
+        : 'Berakhir ${DateFormat('d MMMM yyyy', 'id').format(expiresAt)}';
     return Container(
       width: double.infinity,
       height: 96,
@@ -371,11 +376,11 @@ class _PremiumBadge extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Semua fitur tanpa batas untukmu',
+                  expiryText,
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 11,
-                    color: Colors.white.withValues(alpha:0.75),
+                    color: Colors.white.withValues(alpha: 0.75),
                   ),
                 ),
               ],

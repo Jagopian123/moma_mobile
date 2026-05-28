@@ -234,15 +234,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     if (response.statusCode == 200 && response.data['success'] == true) {
       final current = state.user!;
-      updateUser(UserModel(
-        id: current.id,
-        name: trimmed,
-        email: current.email,
-        avatar: current.avatar,
-        isPremium: current.isPremium,
-        currency: current.currency,
-        locale: current.locale,
-      ));
+      updateUser(current.copyWith(name: trimmed));
     } else {
       throw Exception(
         response.data['message'] ?? 'Gagal memperbarui nama',
@@ -262,18 +254,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
       AppConstants.keyUserEmail: user.email,
       AppConstants.keyUserAvatar: user.avatar ?? '',
       AppConstants.keyIsPremium: user.isPremium,
+      AppConstants.keyPremiumExpiresAt:
+          user.premiumExpiresAt?.toIso8601String() ?? '',
     });
   }
 
   UserModel? _getUserFromHive() {
     final id = HiveService.user.get(AppConstants.keyUserId);
     if (id == null) return null;
+    final expiresAtStr =
+        HiveService.user.get(AppConstants.keyPremiumExpiresAt) as String?;
     return UserModel(
       id: id,
       name: HiveService.user.get(AppConstants.keyUserName) ?? '',
       email: HiveService.user.get(AppConstants.keyUserEmail) ?? '',
       avatar: HiveService.user.get(AppConstants.keyUserAvatar),
       isPremium: HiveService.user.get(AppConstants.keyIsPremium) ?? false,
+      premiumExpiresAt: expiresAtStr != null && expiresAtStr.isNotEmpty
+          ? DateTime.tryParse(expiresAtStr)
+          : null,
       currency: 'IDR',
       locale: 'id',
     );
@@ -289,6 +288,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       AppConstants.keyUserEmail,
       AppConstants.keyUserAvatar,
       AppConstants.keyIsPremium,
+      AppConstants.keyPremiumExpiresAt,
       AppConstants.keyLastBackup,
       AppConstants.keySecurityEnabled,
       AppConstants.keyBiometricEnabled,
