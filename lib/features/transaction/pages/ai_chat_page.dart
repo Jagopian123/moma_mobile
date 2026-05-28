@@ -2271,14 +2271,81 @@ class _AiCategorySheet extends ConsumerStatefulWidget {
 
 class _AiCategorySheetState extends ConsumerState<_AiCategorySheet> {
   CategoryModel? _selectedParent;
+  String _query = '';
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<CategoryModel> get _searchResults {
+    final q = _query.toLowerCase();
+    final notifier = ref.read(categoryProvider.notifier);
+    final results = <CategoryModel>[];
+    for (final main in widget.parentCategories) {
+      if (main.name.toLowerCase().contains(q)) results.add(main);
+      results.addAll(
+        notifier.subCategories(main.id).where(
+              (s) => s.name.toLowerCase().contains(q),
+            ),
+      );
+    }
+    return results;
+  }
+
+  Widget _buildTile(CategoryModel cat, {required bool allowNavigation}) {
+    final hasSubs = allowNavigation &&
+        ref.read(categoryProvider.notifier).subCategories(cat.id).isNotEmpty;
+    return ListTile(
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Color(int.parse(cat.color.replaceFirst('#', '0xFF')))
+              .withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: Center(
+          child: Text(cat.icon, style: const TextStyle(fontSize: 18)),
+        ),
+      ),
+      title: Text(
+        cat.name,
+        style: const TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: hasSubs
+          ? const Text(
+              'Ketuk untuk lihat subkategori',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                color: AppColors.textHint,
+              ),
+            )
+          : null,
+      trailing: hasSubs
+          ? const Icon(Icons.chevron_right_rounded, color: AppColors.textHint)
+          : null,
+      onTap: () {
+        if (hasSubs) {
+          setState(() => _selectedParent = cat);
+        } else {
+          widget.onSelect(cat);
+          Navigator.pop(context);
+        }
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final items = _selectedParent == null
-        ? widget.parentCategories
-        : ref
-            .read(categoryProvider.notifier)
-            .subCategories(_selectedParent!.id);
+    final isSearching = _query.isNotEmpty;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
@@ -2306,120 +2373,136 @@ class _AiCategorySheetState extends ConsumerState<_AiCategorySheet> {
             ),
             child: Row(
               children: [
-                if (_selectedParent != null)
+                if (_selectedParent != null && !isSearching)
                   IconButton(
                     onPressed: () => setState(() => _selectedParent = null),
                     icon: const Icon(Icons.arrow_back_rounded),
                     constraints: const BoxConstraints(),
                     padding: EdgeInsets.zero,
                   ),
-                const SizedBox(width: 4),
+                if (_selectedParent != null && !isSearching)
+                  const SizedBox(width: 4),
                 Text(
-                  _selectedParent?.name ?? 'Pilih Kategori',
+                  isSearching
+                      ? 'Cari Kategori'
+                      : _selectedParent?.name ?? 'Pilih Kategori',
                   style: AppTextStyles.h4,
                 ),
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md, 0, AppSpacing.md, AppSpacing.sm),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (v) => setState(() {
+                _query = v;
+                if (v.isNotEmpty) _selectedParent = null;
+              }),
+              style: const TextStyle(fontFamily: 'Poppins', fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Cari kategori...',
+                hintStyle: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 13,
+                  color: AppColors.textHint,
+                ),
+                prefixIcon: const Icon(Icons.search_rounded,
+                    size: 18, color: AppColors.textHint),
+                suffixIcon: isSearching
+                    ? GestureDetector(
+                        onTap: () => setState(() {
+                          _query = '';
+                          _searchController.clear();
+                        }),
+                        child: const Icon(Icons.close_rounded,
+                            size: 18, color: AppColors.textHint),
+                      )
+                    : null,
+                filled: true,
+                fillColor: AppColors.background,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
           const Divider(height: 1, color: AppColors.border),
           Expanded(
-            child: ListView(
-              children: [
-                if (_selectedParent != null)
-                  ListTile(
-                    leading: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Color(int.parse(
-                          _selectedParent!.color.replaceFirst('#', '0xFF'),
-                        )).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      child: Center(
-                        child: Text(_selectedParent!.icon,
-                            style: const TextStyle(fontSize: 18)),
-                      ),
-                    ),
-                    title: Text(
-                      'Semua ${_selectedParent!.name}',
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    subtitle: const Text(
-                      'Pilih tanpa subkategori',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    trailing: const Icon(Icons.check_circle_outline_rounded,
-                        color: AppColors.primary, size: 20),
-                    onTap: () {
-                      widget.onSelect(_selectedParent!);
-                      Navigator.pop(context);
-                    },
-                  ),
-                ...items.map((cat) {
-                  final hasSubs = _selectedParent == null &&
-                      ref
-                          .read(categoryProvider.notifier)
-                          .subCategories(cat.id)
-                          .isNotEmpty;
-                  return ListTile(
-                    leading: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Color(int.parse(
-                          cat.color.replaceFirst('#', '0xFF'),
-                        )).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      child: Center(
-                        child: Text(cat.icon,
-                            style: const TextStyle(fontSize: 18)),
-                      ),
-                    ),
-                    title: Text(
-                      cat.name,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    subtitle: hasSubs
-                        ? const Text(
-                            'Ketuk untuk lihat subkategori',
+            child: isSearching
+                ? _searchResults.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Kategori tidak ditemukan',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      )
+                    : ListView(
+                        children: _searchResults
+                            .map((c) => _buildTile(c, allowNavigation: false))
+                            .toList(),
+                      )
+                : ListView(
+                    children: [
+                      if (_selectedParent != null)
+                        ListTile(
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Color(int.parse(_selectedParent!.color
+                                      .replaceFirst('#', '0xFF')))
+                                  .withValues(alpha: 0.12),
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: Center(
+                              child: Text(_selectedParent!.icon,
+                                  style: const TextStyle(fontSize: 18)),
+                            ),
+                          ),
+                          title: Text(
+                            'Semua ${_selectedParent!.name}',
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'Pilih tanpa subkategori',
                             style: TextStyle(
                               fontFamily: 'Poppins',
-                              fontSize: 11,
-                              color: AppColors.textHint,
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
                             ),
-                          )
-                        : null,
-                    trailing: hasSubs
-                        ? const Icon(Icons.chevron_right_rounded,
-                            color: AppColors.textHint)
-                        : null,
-                    onTap: () {
-                      if (hasSubs) {
-                        setState(() => _selectedParent = cat);
-                      } else {
-                        widget.onSelect(cat);
-                        Navigator.pop(context);
-                      }
-                    },
-                  );
-                }),
-              ],
-            ),
+                          ),
+                          trailing: const Icon(
+                              Icons.check_circle_outline_rounded,
+                              color: AppColors.primary,
+                              size: 20),
+                          onTap: () {
+                            widget.onSelect(_selectedParent!);
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ...(_selectedParent == null
+                              ? widget.parentCategories
+                              : ref
+                                  .read(categoryProvider.notifier)
+                                  .subCategories(_selectedParent!.id))
+                          .map((c) => _buildTile(
+                              c, allowNavigation: _selectedParent == null)),
+                    ],
+                  ),
           ),
         ],
       ),
