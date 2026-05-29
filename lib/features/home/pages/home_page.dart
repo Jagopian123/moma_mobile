@@ -285,19 +285,22 @@ class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
     InsightItem(
       emoji: '💰',
       title: 'Catat transaksi pertamamu',
-      body: 'Tap tombol + atau gunakan AI Chat untuk mulai mencatat keuanganmu.',
+      body:
+          'Tap tombol + atau gunakan AI Chat untuk mulai mencatat keuanganmu.',
       type: InsightType.neutral,
     ),
     InsightItem(
       emoji: '🤖',
       title: 'AI siap membantumu',
-      body: 'Ketik seperti "makan siang 30k cash" dan AI langsung parse jadi transaksi.',
+      body:
+          'Ketik seperti "makan siang 30k cash" dan AI langsung parse jadi transaksi.',
       type: InsightType.neutral,
     ),
     InsightItem(
       emoji: '🎯',
       title: 'Rencanakan budgetmu',
-      body: 'Buat anggaran per kategori biar pengeluaranmu selalu terkontrol setiap bulan.',
+      body:
+          'Buat anggaran per kategori biar pengeluaranmu selalu terkontrol setiap bulan.',
       type: InsightType.neutral,
     ),
   ];
@@ -327,6 +330,12 @@ class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
     super.dispose();
   }
 
+  String _mascotAsset(String? base, bool isPro) {
+    final asset = base ?? 'assets/images/mascot-insight-excited.png';
+    if (!isPro) return asset;
+    return asset.replaceFirst('.png', '-pro.png');
+  }
+
   @override
   Widget build(BuildContext context) {
     final insights = ref.watch(homeInsightsProvider);
@@ -335,20 +344,21 @@ class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
 
     return GestureDetector(
       onTap: widget.onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFEFF6FF),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(
-              color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            // Content
-            Padding(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Banner container (tetap ter-clip untuk border radius)
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md, AppSpacing.md, 100, AppSpacing.md),
+                  AppSpacing.md, AppSpacing.md, 110, AppSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -378,8 +388,7 @@ class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
                     child: PageView.builder(
                       controller: _pageController,
                       itemCount: display.length,
-                      onPageChanged: (i) =>
-                          setState(() => _currentPage = i),
+                      onPageChanged: (i) => setState(() => _currentPage = i),
                       itemBuilder: (_, i) {
                         final insight = display[i];
                         return Column(
@@ -428,8 +437,7 @@ class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF6366F1).withValues(
                                 alpha: i == _currentPage ? 1.0 : 0.25),
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.full),
+                            borderRadius: BorderRadius.circular(AppRadius.full),
                           ),
                         ),
                       ),
@@ -438,29 +446,36 @@ class _HomeInsightSectionState extends ConsumerState<_HomeInsightSection> {
                 ],
               ),
             ),
+          ),
 
-            // Mascot — static
-            Positioned(
-              right: 0,
-              bottom: 0,
+          // Mascot — di luar clip, bisa overflow ke atas
+          Positioned(
+            right: 0,
+            bottom: 3,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, anim) => FadeTransition(
+                opacity: anim,
+                child: ScaleTransition(scale: anim, child: child),
+              ),
               child: Image.asset(
-                isPro
-                    ? 'assets/images/mascot-pro.png'
-                    : 'assets/images/mascot.png',
-                width: 90,
-                height: 90,
+                _mascotAsset(display[_currentPage].mascotAsset, isPro),
+                key: ValueKey(_mascotAsset(display[_currentPage].mascotAsset, isPro)),
+                width: 115,
+                height: 115,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const SizedBox(
-                  width: 90,
-                  height: 90,
-                  child: Center(
-                      child: Text('🤖',
-                          style: TextStyle(fontSize: 40))),
+                  width: 115,
+                  height: 115,
+                  child:
+                      Center(child: Text('🤖', style: TextStyle(fontSize: 40))),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1056,7 +1071,8 @@ class _NotifBell extends ConsumerWidget {
                     color: AppColors.expense,
                     shape: BoxShape.circle,
                   ),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  constraints:
+                      const BoxConstraints(minWidth: 16, minHeight: 16),
                   child: Text(
                     unread > 9 ? '9+' : '$unread',
                     style: const TextStyle(

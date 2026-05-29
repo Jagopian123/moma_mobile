@@ -90,12 +90,14 @@ class InsightItem {
   final String title;
   final String body;
   final InsightType type;
+  final String? mascotAsset;
 
   const InsightItem({
     required this.emoji,
     required this.title,
     required this.body,
     required this.type,
+    this.mascotAsset,
   });
 }
 

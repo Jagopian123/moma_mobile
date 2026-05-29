@@ -217,27 +217,37 @@ class _InsightRotatingCard extends StatelessWidget {
     this.isPro = false,
   });
 
+  String _mascotAsset(String? base, bool isPro) {
+    final asset = base ?? 'assets/images/mascot-insight-excited.png';
+    if (!isPro) return asset;
+    return asset.replaceFirst('.png', '-pro.png');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final current = insights[currentPage];
+
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFEFF6FF),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(
-              color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            Padding(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Banner container
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
               padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md, AppSpacing.md, 100, AppSpacing.md),
+                  AppSpacing.md, AppSpacing.md, 110, AppSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Label — static
+                  // Label
                   const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -257,7 +267,7 @@ class _InsightRotatingCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
 
-                  // PageView — fixed height so card doesn't resize
+                  // PageView
                   SizedBox(
                     height: 54,
                     child: PageView.builder(
@@ -298,71 +308,60 @@ class _InsightRotatingCard extends StatelessWidget {
                     ),
                   ),
 
-                  // Dot indicators + Lihat Semua
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      if (insights.length > 1)
-                        ...List.generate(
-                          insights.length.clamp(0, 8),
-                          (i) => AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            width: i == currentPage ? 14 : 5,
-                            height: 5,
-                            margin: const EdgeInsets.only(right: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF6366F1).withValues(
-                                  alpha: i == currentPage ? 1.0 : 0.25),
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.full),
-                            ),
+                  // Dot indicators
+                  if (insights.length > 1) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: List.generate(
+                        insights.length.clamp(0, 8),
+                        (i) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: i == currentPage ? 14 : 5,
+                          height: 5,
+                          margin: const EdgeInsets.only(right: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6366F1).withValues(
+                                alpha: i == currentPage ? 1.0 : 0.25),
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.full),
                           ),
                         ),
-                      const Spacer(),
-                      Text(
-                        'Lihat Semua',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color:
-                              const Color(0xFF6366F1).withValues(alpha: 0.8),
-                        ),
                       ),
-                      const SizedBox(width: 2),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 10,
-                        color:
-                            const Color(0xFF6366F1).withValues(alpha: 0.8),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ],
               ),
             ),
+          ),
 
-            // Mascot — static
-            Positioned(
-              right: 0,
-              bottom: 0,
+          // Mascot — reaktif, overflow ke atas
+          Positioned(
+            right: 0,
+            bottom: 3,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, anim) => FadeTransition(
+                opacity: anim,
+                child: ScaleTransition(scale: anim, child: child),
+              ),
               child: Image.asset(
-                isPro
-                    ? 'assets/images/mascot-pro.png'
-                    : 'assets/images/mascot.png',
-                width: 90,
-                height: 90,
+                _mascotAsset(current.mascotAsset, isPro),
+                key: ValueKey(_mascotAsset(current.mascotAsset, isPro)),
+                width: 115,
+                height: 115,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const SizedBox(
-                  width: 90,
-                  height: 90,
-                  child: Center(
-                      child: Text('🤖', style: TextStyle(fontSize: 40))),
+                  width: 115,
+                  height: 115,
+                  child:
+                      Center(child: Text('🤖', style: TextStyle(fontSize: 40))),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

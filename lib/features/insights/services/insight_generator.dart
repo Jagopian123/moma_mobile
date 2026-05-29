@@ -56,6 +56,7 @@ class InsightGenerator {
             body: 'Pengeluaran udah melewati batas ${_fmt(budget.limitAmount)}. '
                 'Saatnya rem pengeluaran bulan ini!',
             type: InsightType.danger,
+            mascotAsset: 'assets/images/mascot-insight-sad.png',
           ),
         ));
       } else if (pct >= 0.85) {
@@ -68,6 +69,7 @@ class InsightGenerator {
             body: 'Udah terpakai ${(pct * 100).toStringAsFixed(0)}% dari '
                 '${_fmt(budget.limitAmount)}, sisa $sisa lagi. Hati-hati ya!',
             type: InsightType.warning,
+            mascotAsset: 'assets/images/mascot-insight-worried.png',
           ),
         ));
       }
@@ -100,6 +102,7 @@ class InsightGenerator {
             body: 'Bulan ini lebih banyak keluar daripada masuk. '
                 'Yuk cek mana yang bisa dikurangi!',
             type: InsightType.danger,
+            mascotAsset: 'assets/images/mascot-insight-sad.png',
           ),
         ),
       ];
@@ -115,6 +118,7 @@ class InsightGenerator {
             body: 'Kamu berhasil sisihkan ${(savingRate * 100).toStringAsFixed(0)}%'
                 ' dari pemasukan. Terus pertahankan ya!',
             type: InsightType.positive,
+            mascotAsset: 'assets/images/mascot-insight-happy.png',
           ),
         ),
       ];
@@ -156,6 +160,7 @@ class InsightGenerator {
                 '${ratio.toStringAsFixed(1)}x dari rata-rata harianmu. '
                 'Ada pengeluaran tak terduga?',
             type: InsightType.warning,
+            mascotAsset: 'assets/images/mascot-insight-shocked.png',
           ),
         ),
       ];
@@ -193,6 +198,7 @@ class InsightGenerator {
             body: 'Pengeluaran minggu ini lebih tinggi dari minggu lalu. '
                 'Ada yang bisa dikurangi?',
             type: InsightType.warning,
+            mascotAsset: 'assets/images/mascot-insight-worried.png',
           ),
         ),
       ];
@@ -207,6 +213,7 @@ class InsightGenerator {
             title: 'Lebih hemat ${pct.toStringAsFixed(0)}% minggu ini!',
             body: 'Pengeluaran turun dibanding minggu lalu. Pertahankan terus!',
             type: InsightType.positive,
+            mascotAsset: 'assets/images/mascot-insight-happy.png',
           ),
         ),
       ];
@@ -250,6 +257,7 @@ class InsightGenerator {
             body: 'Pengeluaran terus turun 2 minggu ini. '
                 'Kamu lagi on track banget, keep it up!',
             type: InsightType.positive,
+            mascotAsset: 'assets/images/mascot-insight-celebrate.png',
           ),
         ),
       ];
@@ -289,6 +297,7 @@ class InsightGenerator {
               body: 'Kalau pola ini lanjut, kamu akan menyisihkan sekitar '
                   '${_fmt(projectedSaving)} sampai akhir bulan. Bagus!',
               type: InsightType.positive,
+              mascotAsset: 'assets/images/mascot-insight-excited.png',
             ),
           ),
         ];
@@ -303,6 +312,7 @@ class InsightGenerator {
               body: 'Dengan pola saat ini, bisa kehabisan ${_fmt(overAmount)} '
                   'sebelum akhir bulan. Perlu dikontrol!',
               type: InsightType.warning,
+              mascotAsset: 'assets/images/mascot-insight-worried.png',
             ),
           ),
         ];
@@ -360,6 +370,7 @@ class InsightGenerator {
               body: 'Pengeluaran $name naik $totalGrowth% dari 2 bulan lalu. '
                   'Mungkin sudah waktunya dievaluasi?',
               type: InsightType.warning,
+              mascotAsset: 'assets/images/mascot-insight-info.png',
             ),
           ),
         ];
@@ -397,6 +408,7 @@ class InsightGenerator {
             body: 'Pengeluaran bulan ini turun ${pct.toStringAsFixed(0)}% '
                 'dibanding bulan lalu. Progres yang bagus!',
             type: InsightType.positive,
+            mascotAsset: 'assets/images/mascot-insight-happy.png',
           ),
         ),
       ];
@@ -437,6 +449,7 @@ class InsightGenerator {
           body: 'Kategori ini menyedot $pct% dari total pengeluaran bulan ini '
               '(${_fmt(top.amount)}). Normal aja atau bisa dikurangi?',
           type: InsightType.neutral,
+          mascotAsset: 'assets/images/mascot-insight-thinking.png',
         ),
       ),
     ];
@@ -492,6 +505,7 @@ class InsightGenerator {
             body: 'Rata-rata Sabtu-Minggu ${ratio}x lebih banyak dari hari kerja. '
                 'Weekend effect nih, perlu diwaspadai!',
             type: InsightType.neutral,
+            mascotAsset: 'assets/images/mascot-insight-thinking.png',
           ),
         ),
       ];
@@ -553,6 +567,7 @@ class InsightGenerator {
           body: 'Rata-rata pengeluaran tertinggi ada di hari ${dayNames[busiestDow]}. '
               'Mau lebih hati-hati di hari itu?',
           type: InsightType.neutral,
+          mascotAsset: 'assets/images/mascot-insight-info.png',
         ),
       ),
     ];
@@ -586,6 +601,7 @@ class InsightGenerator {
             body: 'Bulan kemarin berhasil sisihkan ${_fmt(saving)} dari pemasukan. '
                 'Bisa dipertahankan bulan ini?',
             type: InsightType.positive,
+            mascotAsset: 'assets/images/mascot-insight-celebrate.png',
           ),
         ),
       ];
